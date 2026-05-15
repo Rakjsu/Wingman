@@ -1,13 +1,17 @@
 [package]
-name = "tauri-app"
+name = "wingman"
 version = "0.1.0"
 description = "Wingman — a friendly GUI for winget"
 authors = ["rakjs"]
 edition = "2021"
 
 [lib]
-name = "tauri_app_lib"
+name = "wingman_lib"
 crate-type = ["staticlib", "cdylib", "rlib"]
+
+[[bin]]
+name = "Wingman"
+path = "src/main.rs"
 
 [build-dependencies]
 tauri-build = { version = "2", features = [] }

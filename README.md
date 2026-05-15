@@ -46,7 +46,7 @@ winget install Rakjs.Wingman
 - [WebView2 runtime](https://developer.microsoft.com/en-us/microsoft-edge/webview2/) (preinstalled on Windows 11)
 - `winget` available in `PATH` — verify with `winget --version`
 
-**Run**
+**Run in development**
 
 ```powershell
 git clone https://github.com/rakjs/Wingman.git
@@ -55,13 +55,15 @@ npm install
 npm run tauri dev
 ```
 
-**Bundle a release MSI**
+`tauri dev` starts the Vite dev server on port 1420 and opens the Wingman window. **Don't double-click the binary in `src-tauri/target/debug/` directly** — debug builds load the frontend from the dev server, so without `tauri dev` running you'll get a blank window (or worse, the UI of any other Vite project squatting on port 1420).
+
+**Bundle a standalone release**
 
 ```powershell
 npm run tauri build
 ```
 
-The installer lands in `src-tauri/target/release/bundle/msi/`.
+Produces a single self-contained `Wingman.exe` plus an installer (`.msi`) in `src-tauri/target/release/bundle/msi/`. These are what you ship to users — they don't need Node, Rust, or a dev server.
 
 ## Tech stack
 

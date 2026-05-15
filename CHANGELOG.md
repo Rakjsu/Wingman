@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+- Renamed Cargo package from `tauri-app` to `wingman` and added explicit `[[bin]]` section so the produced binary is `Wingman.exe` (was `tauri-app.exe`)
+- Renamed the Rust library crate from `tauri_app_lib` to `wingman_lib`
+
 ### Planned
 - UAC auto-elevation when an operation requires admin
 - Cancel in-flight install / uninstall / upgrade
