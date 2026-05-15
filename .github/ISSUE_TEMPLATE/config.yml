@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Question or discussion
+    url: https://github.com/rakjs/Wingman/discussions
+    about: For general questions, ideas, and conversations — please use GitHub Discussions instead of opening an issue.
+  - name: Security vulnerability
+    url: https://github.com/rakjs/Wingman/security/advisories/new
+    about: Report security issues privately. Do NOT open a public issue.
