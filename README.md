@@ -17,14 +17,20 @@ Wingman is a lightweight desktop app that turns Windows' command-line package ma
 
 ## Features
 
-- **Discover** — full-text search over the winget catalog with debounced queries
-- **Installed** — browse everything you've installed and uninstall in one click
-- **Updates** — see all upgradable packages and apply them individually or all at once
-- **Featured** — curated grid of popular packages on the empty Discover state
-- **Live progress** — streaming logs from winget while operations run
+- **Discover** — search the winget catalogue, or browse curated picks grouped by category
+- **Installed** — filter, sort, uninstall one package or a whole selection at once
+- **Updates** — update packages individually or all together, with pins to skip the ones you handle yourself
+- **History** — every operation with its outcome and timestamp
+- **Details** — publisher, licence, description, homepage and per-version install
+- **Favorites** — star packages to keep them at the top of Discover
+- **Import / export** — carry your package list to a new machine
+- **Cancel anything** — stop a running install; the whole process tree goes with it
+- **Real progress** — live percentage parsed from winget, plus a copyable activity log
+- **Light, dark or system** theme
 - **Bilingual** — UI auto-detects PT-BR or EN from your system
-- **Keyboard-first** — `Ctrl+F` to search, `Ctrl+1/2/3` to switch tabs, `Esc` to dismiss errors
-- **Tiny binary** — ~5 MB MSI, native WebView2, no Electron bloat
+- **Keyboard-first** — `Ctrl+F` to search, `Ctrl+1..4` for sections, `Esc` to dismiss
+- **Handles elevation** — offers to relaunch as administrator when winget demands it
+- **Tiny binary** — native WebView2, no Electron bloat
 
 ## Install
 

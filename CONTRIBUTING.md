@@ -48,18 +48,30 @@ public/             Static assets (logo, favicon)
 Before opening a PR, please run:
 
 ```powershell
-# Rust unit tests
-cd src-tauri && cargo test --lib
-
-# TypeScript type-check
+# Frontend: types, lint, formatting, tests, build
 npx tsc --noEmit
-
-# Frontend production build
+npm run lint
+npm run format:check
+npm run test
 npm run build
 
-# Lint Rust (optional but appreciated)
-cd src-tauri && cargo clippy -- -D warnings
+# Backend: formatting, lint, tests
+cd src-tauri
+cargo fmt --all --check
+cargo clippy --all-targets -- -D warnings
+cargo test --lib
 ```
+
+CI runs exactly these. There is also a set of integration tests that drive the
+real winget on your machine:
+
+```powershell
+cd src-tauri
+cargo test --test integration -- --ignored --test-threads=1
+```
+
+`--test-threads=1` is required: winget locks its package source, so parallel
+invocations make each other fail.
 
 ## Coding conventions
 

@@ -13,19 +13,28 @@
     "windows": [
       {
         "title": "Wingman",
-        "width": 1100,
-        "height": 720,
-        "minWidth": 800,
-        "minHeight": 500
+        "width": 1180,
+        "height": 780,
+        "minWidth": 860,
+        "minHeight": 560,
+        "resizable": true,
+        "center": true,
+        "visible": false
       }
     ],
     "security": {
-      "csp": null
+      "csp": "default-src 'self'; img-src 'self' asset: data:; style-src 'self' 'unsafe-inline'; script-src 'self'; connect-src 'self' ipc: http://ipc.localhost; font-src 'self' data:; object-src 'none'; base-uri 'none'; frame-ancestors 'none'"
     }
   },
   "bundle": {
     "active": true,
-    "targets": "all",
+    "targets": ["msi", "nsis"],
+    "publisher": "Rakjsu",
+    "copyright": "Copyright (c) 2026 Rakjsu",
+    "category": "Utility",
+    "shortDescription": "A friendly GUI for winget",
+    "longDescription": "Wingman turns the Windows Package Manager (winget) into a clean, fast desktop app: search the catalogue, install and remove packages, and apply updates without touching a terminal.",
+    "licenseFile": "../LICENSE",
     "icon": [
       "icons/32x32.png",
       "icons/128x128.png",
