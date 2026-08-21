@@ -2,12 +2,12 @@
 name = "wingman"
 version = "0.1.0"
 description = "Wingman — a friendly GUI for winget"
-authors = ["rakjs"]
+authors = ["Rakjsu"]
 edition = "2021"
 # 1.82 for `Option::is_none_or`, used by the table parser.
 rust-version = "1.82"
 license = "MIT"
-repository = "https://github.com/rakjs/Wingman"
+repository = "https://github.com/Rakjsu/Wingman"
 
 [lib]
 name = "wingman_lib"

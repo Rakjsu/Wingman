@@ -8,6 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+
 - **Light / dark / system theme** with a switcher in the sidebar; "system" follows the OS live
 - **Sidebar navigation** replacing the tab bar, with live badges for installed and upgradable counts
 - **History** section listing every operation with its outcome and timestamp
@@ -34,6 +35,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - ESLint, Prettier, and Dependabot configuration
 
 ### Changed
+
 - Renamed Cargo package from `tauri-app` to `wingman` and added an explicit `[[bin]]` section so the produced binary is `Wingman.exe` (was `tauri-app.exe`)
 - Renamed the Rust library crate from `tauri_app_lib` to `wingman_lib`
 - Errors are now a typed enum mapped from winget's exit codes, so the UI can offer the right recovery instead of printing raw text
@@ -45,6 +47,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Package identifiers coming from the frontend are validated before reaching the process layer
 
 ### Fixed
+
 - **Duplicate log lines**: every winget event was handled twice because a subscription that resolved after React's StrictMode teardown was never unsubscribed. Covered by a regression test
 - **Truncated names in non-Latin scripts**: the table parser sliced by character index while winget pads by display width, dropping one character per wide (CJK) glyph
 - **stderr was discarded**: winget's error output is now streamed and surfaced alongside stdout
@@ -53,9 +56,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - The capability file granted the whole `opener` plugin; it now lists only the specific permissions used
 
 ### Security
+
 - Fixed all 5 npm advisories reported by `npm audit` (2 low, 3 high) in build tooling
 
 ### Planned
+
 - **Drive winget through its COM API** (`Microsoft.Management.Deployment`) instead of parsing
   console output. Verified feasible on 2026-08-21: the winmd ships with App Installer and the
   out-of-process COM server activates from an unpackaged process. The `Backend` enum in
@@ -63,7 +68,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   exist (checked against winget v1.29.290), so COM is the only route to structured results.
 - Code-signed MSI (unsigned builds trip SmartScreen)
 - Auto-updater via `tauri-plugin-updater`
-- Publish manifest to [winget-pkgs](https://github.com/microsoft/winget-pkgs) as `Rakjs.Wingman`
+- Publish manifest to [winget-pkgs](https://github.com/microsoft/winget-pkgs) as `Rakjsu.Wingman`
 - Opt-in anonymous usage telemetry
 - Landing page on GitHub Pages
 
@@ -72,6 +77,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 Initial public MVP.
 
 ### Added
+
 - Tauri 2 + React 19 + TypeScript scaffold with tokio-based winget wrapper
 - Three-tab UI: **Discover** / **Installed** / **Updates**
 - Search packages with 400 ms debounce
@@ -86,5 +92,5 @@ Initial public MVP.
 - Dark theme with accessible contrast
 - Unit tests for the table parser
 
-[Unreleased]: https://github.com/rakjs/Wingman/compare/v0.1.0...HEAD
-[0.1.0]: https://github.com/rakjs/Wingman/releases/tag/v0.1.0
+[Unreleased]: https://github.com/Rakjsu/Wingman/compare/v0.1.0...HEAD
+[0.1.0]: https://github.com/Rakjsu/Wingman/releases/tag/v0.1.0

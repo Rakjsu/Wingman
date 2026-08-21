@@ -19,7 +19,7 @@ This project follows the [Contributor Covenant](CODE_OF_CONDUCT.md). By particip
 **First-time setup**
 
 ```powershell
-git clone https://github.com/rakjs/Wingman.git
+git clone https://github.com/Rakjsu/Wingman.git
 cd Wingman
 npm install
 npm run tauri dev
@@ -30,18 +30,26 @@ The first `tauri dev` compiles the Rust bundle (~2–5 min). Subsequent runs are
 ## Project layout
 
 ```
-src/                React frontend
-  components/       Reusable UI pieces
-  hooks/useWinget   invoke() wrapper + event listener
-  data/featured.ts  Curated package list shown on empty Discover
-  i18n.ts           Bundled PT/EN strings + t() helper
-src-tauri/          Rust backend
-  src/lib.rs        Tauri builder + handler registration
-  src/commands.rs   #[tauri::command] surface (frontend ↔ backend)
-  src/winget.rs     winget process wrapper + tabular parser
-  tauri.conf.json   App identity, window, bundle config
-public/             Static assets (logo, favicon)
+src/                    React frontend
+  components/           Sidebar, PackageList, dialogs, feedback
+  hooks/                events, operation queue, storage, theme, toasts
+  lib/                  api bridge, error mapping, shared types
+  data/featured.ts      Curated catalogue shown on an empty Discover
+  i18n.ts               en / pt / es, plurals, dates, collation
+  App.tsx               Sections and orchestration
+src-tauri/              Rust backend
+  src/lib.rs            Tauri builder, plugins, handler registration
+  src/commands.rs       #[tauri::command] surface (frontend ↔ backend)
+  src/winget.rs         Process control, parser, cancellation registry
+  src/error.rs          winget exit codes → typed errors
+  src/logging.rs        Rotated file logs
+  tests/integration.rs  Runs against a real winget
+  tauri.conf.json       App identity, window, CSP, bundle config
+public/                 Static assets (logo, favicon)
 ```
+
+[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) explains why the pieces are shaped
+this way, including the parsing traps winget sets.
 
 ## Running checks
 
@@ -77,9 +85,10 @@ invocations make each other fail.
 
 - **Rust** — `cargo fmt` defaults. Prefer `?` over `.unwrap()`. Errors should bubble up as `WingetError`.
 - **TypeScript / React** — function components, `useCallback`/`useMemo` only when needed, prefer named exports.
-- **Comments** — write code that explains itself. Add a comment only when the *why* is non-obvious (subtle invariant, workaround for a bug, hidden constraint).
+- **Comments** — write code that explains itself. Add a comment only when the _why_ is non-obvious (subtle invariant, workaround for a bug, hidden constraint).
 - **Identifiers** — use full English words; avoid one-letter names except for trivial loop counters.
-- **CSS** — extend the variables in [src/App.css](src/App.css) (`--accent`, `--panel`, …) instead of hardcoding colors.
+- **CSS** — extend the tokens at the top of [src/App.css](src/App.css) (`--accent`, `--surface`, …) instead of hardcoding colours, and keep both themes working.
+- **Accessibility** — every control needs an accessible name; `src/a11y.test.tsx` runs `axe` over the main screens and will fail the build.
 
 ## Commit messages
 
@@ -94,17 +103,25 @@ invocations make each other fail.
 
 - [ ] Branch off `main` and rebase before opening the PR
 - [ ] Tests added or updated, where it makes sense
-- [ ] `cargo test`, `tsc --noEmit`, and `npm run build` all pass locally
+- [ ] Every check in "Running checks" passes locally
 - [ ] CHANGELOG.md updated under `[Unreleased]` if the change is user-visible
-- [ ] PR description references the related issue (if any) and explains *why*
+- [ ] PR description references the related issue (if any) and explains _why_
 
 ## Adding a translation
 
-Edit [src/i18n.ts](src/i18n.ts):
+Everything lives in [src/i18n.ts](src/i18n.ts):
 
-1. Add a new top-level key to the `translations` object (e.g. `es: {...}`)
-2. Update the `Lang` type union and `detectLang()` to return your code when `navigator.language` matches
-3. Open a PR — no other files need changing
+1. Add your code to the `Lang` union at the top of the file
+2. Copy the `en` object, translate the values, and add it to `dictionaries`
+3. Add an entry to `LANGUAGES` so it appears in the sidebar picker
+4. Teach `detectLang()` to return your code for the matching `navigator.language`
+
+`npm run test` then checks the new dictionary for you: it must have exactly the
+same keys as English, the same `{placeholders}` in each string, and a `singular|plural`
+form wherever English has one. Plural selection uses `Intl.PluralRules`, so each
+language applies its own rules.
+
+No other file needs changing.
 
 ## Reporting bugs / requesting features
 

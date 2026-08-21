@@ -13,7 +13,7 @@ up to date — without opening a terminal.
 [![Platform](https://img.shields.io/badge/platform-Windows%2010%20%2F%2011-0078D6?style=flat-square&logo=windows)](#requirements)
 [![Built with Tauri](https://img.shields.io/badge/built%20with-Tauri%202-24C8DB?style=flat-square&logo=tauri)](https://tauri.app/)
 [![Rust](https://img.shields.io/badge/rust-1.82%2B-CE422B?style=flat-square&logo=rust)](https://rustup.rs/)
-[![CI](https://img.shields.io/github/actions/workflow/status/rakjs/Wingman/ci.yml?branch=main&style=flat-square&label=CI)](https://github.com/rakjs/Wingman/actions)
+[![CI](https://img.shields.io/github/actions/workflow/status/Rakjsu/Wingman/ci.yml?branch=main&style=flat-square&label=CI)](https://github.com/Rakjsu/Wingman/actions)
 
 </div>
 
@@ -44,14 +44,14 @@ up to date — without opening a terminal.
 keeps everything that makes winget good — the official catalogue, silent
 installs, no bundled adware — and puts a real interface on top:
 
-|                        | `winget` CLI            | Wingman                                    |
-| ---------------------- | ----------------------- | ------------------------------------------ |
-| Browse the catalogue   | type exact queries      | search-as-you-type, curated categories     |
-| See what needs an update | run a command          | a live badge in the sidebar                |
-| Update everything      | one command, no preview | preview the list, pin what to skip         |
-| A failed install       | a hex error code        | a sentence, and the action that fixes it   |
-| Needs administrator    | rerun in an elevated shell | offers to relaunch itself                |
-| Long install           | watch the terminal      | progress bar, cancellable, logged to disk  |
+|                          | `winget` CLI               | Wingman                                   |
+| ------------------------ | -------------------------- | ----------------------------------------- |
+| Browse the catalogue     | type exact queries         | search-as-you-type, curated categories    |
+| See what needs an update | run a command              | a live badge in the sidebar               |
+| Update everything        | one command, no preview    | preview the list, pin what to skip        |
+| A failed install         | a hex error code           | a sentence, and the action that fixes it  |
+| Needs administrator      | rerun in an elevated shell | offers to relaunch itself                 |
+| Long install             | watch the terminal         | progress bar, cancellable, logged to disk |
 
 Wingman is a front-end, not a replacement: everything it does is a winget
 invocation you could have typed yourself.
@@ -104,7 +104,7 @@ invocation you could have typed yourself.
 
 **From a release**
 
-Grab the latest `.msi` from the [Releases page](https://github.com/rakjs/Wingman/releases)
+Grab the latest `.msi` from the [Releases page](https://github.com/Rakjsu/Wingman/releases)
 and run it.
 
 > Releases are not code-signed yet, so SmartScreen will warn on first run.
@@ -113,16 +113,16 @@ and run it.
 **From winget itself** (once the manifest is published)
 
 ```powershell
-winget install Rakjs.Wingman
+winget install Rakjsu.Wingman
 ```
 
 ## Requirements
 
-| Requirement    | Minimum                                              |
-| -------------- | ---------------------------------------------------- |
-| Windows        | 10 (1809) or 11                                      |
-| winget         | 1.6 — ships as "App Installer" from the Microsoft Store |
-| WebView2       | Preinstalled on Windows 11; installed by the Wingman installer on Windows 10 |
+| Requirement | Minimum                                                                      |
+| ----------- | ---------------------------------------------------------------------------- |
+| Windows     | 10 (1809) or 11                                                              |
+| winget      | 1.6 — ships as "App Installer" from the Microsoft Store                      |
+| WebView2    | Preinstalled on Windows 11; installed by the Wingman installer on Windows 10 |
 
 Wingman checks all of this at startup and walks you through anything missing.
 
@@ -137,7 +137,7 @@ Wingman checks all of this at startup and walks you through anything missing.
 **Run it**
 
 ```powershell
-git clone https://github.com/rakjs/Wingman.git
+git clone https://github.com/Rakjsu/Wingman.git
 cd Wingman
 npm install
 npm run tauri dev
@@ -147,7 +147,7 @@ npm run tauri dev
 > Do not double-click the executable in `src-tauri/target/debug/`. Debug builds
 > load their interface from the Vite dev server on port 1420, so without
 > `tauri dev` running you get a blank window — or, if another Vite project holds
-> that port, *that* project's interface. Use `npm run tauri dev` while developing
+> that port, _that_ project's interface. Use `npm run tauri dev` while developing
 > and `npm run tauri build` for anything you actually want to run.
 
 **Build installers**
@@ -188,7 +188,7 @@ A few decisions worth knowing about:
 - **Errors are typed.** winget's exit codes are mapped onto a Rust enum, which is
   what lets the interface offer "restart as administrator" instead of printing
   `0x8A150019`.
-- **Output parsing is defensive.** winget's tables are aligned by *display*
+- **Output parsing is defensive.** winget's tables are aligned by _display_
   width, its progress bar rewrites lines with carriage returns, and some shells
   hand back UTF-16. The parser handles all three, and a property test keeps it
   from panicking on anything unexpected.
@@ -220,23 +220,23 @@ Wingman/
 
 ## Keyboard shortcuts
 
-| Keys           | Action                        |
-| -------------- | ----------------------------- |
-| `Ctrl` `F`     | Focus search                  |
-| `Ctrl` `K`     | Focus search                  |
+| Keys           | Action                                   |
+| -------------- | ---------------------------------------- |
+| `Ctrl` `F`     | Focus search                             |
+| `Ctrl` `K`     | Focus search                             |
 | `Ctrl` `1`–`4` | Discover / Installed / Updates / History |
-| `Esc`          | Close a dialog, dismiss an error |
-| `?`            | Show the shortcut list        |
+| `Esc`          | Close a dialog, dismiss an error         |
+| `?`            | Show the shortcut list                   |
 
 ## Where your data lives
 
 Wingman keeps everything on your machine and sends nothing anywhere.
 
-| What                                          | Where                              |
-| --------------------------------------------- | ---------------------------------- |
-| Logs (daily, kept 14 days)                    | `%LOCALAPPDATA%\Wingman\logs`      |
-| Theme, language, favorites, pins, history     | Browser local storage inside the app |
-| Window size and position                      | Managed by the Tauri window-state plugin |
+| What                                      | Where                                    |
+| ----------------------------------------- | ---------------------------------------- |
+| Logs (daily, kept 14 days)                | `%LOCALAPPDATA%\Wingman\logs`            |
+| Theme, language, favorites, pins, history | Browser local storage inside the app     |
+| Window size and position                  | Managed by the Tauri window-state plugin |
 
 There is no telemetry, no account, and no network traffic beyond what winget
 itself makes to fetch packages.

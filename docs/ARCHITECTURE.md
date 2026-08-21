@@ -108,7 +108,7 @@ chatty stderr cannot deadlock a full stdout pipe.
 ### Cancellation
 
 `OpRegistry` maps operation ids to process ids. Cancelling removes the entry and
-runs `taskkill /F /T`, killing the *tree* — winget launches the real installer as
+runs `taskkill /F /T`, killing the _tree_ — winget launches the real installer as
 a child, so killing winget alone leaves the installer running. The same registry
 is drained when the window closes, for the same reason.
 
@@ -120,7 +120,7 @@ the main thread, and a blocking `taskkill` there freezes the window.
 winget takes an exclusive lock on its package source. Two operations at once make
 each other fail with `0x8A150049`. The frontend's `useOperationQueue` serialises
 everything the user starts; the backend's `run_capture_retrying` adds backoff for
-the case where something *outside* Wingman holds the lock.
+the case where something _outside_ Wingman holds the lock.
 
 This is also why `cargo test --test integration` needs `--test-threads=1`.
 
@@ -128,13 +128,13 @@ This is also why `cargo test --test integration` needs `--test-threads=1`.
 
 `error.rs` maps winget's exit codes onto variants that imply an action:
 
-| Exit code    | Variant           | What the UI does                |
-| ------------ | ----------------- | ------------------------------- |
-| `0x8A150019` | `NeedsElevation`  | offers to relaunch as admin     |
-| `0x8A150014` | `NotFound`        | shows an empty result, not an error |
-| `0x8A150049` | `SourceBusy`      | retries, then suggests waiting  |
-| `0x8A150011` | `HashMismatch`    | reports that nothing was run    |
-| `0x8A150023` | `Cancelled`       | a quiet toast                   |
+| Exit code    | Variant          | What the UI does                    |
+| ------------ | ---------------- | ----------------------------------- |
+| `0x8A150019` | `NeedsElevation` | offers to relaunch as admin         |
+| `0x8A150014` | `NotFound`       | shows an empty result, not an error |
+| `0x8A150049` | `SourceBusy`     | retries, then suggests waiting      |
+| `0x8A150011` | `HashMismatch`   | reports that nothing was run        |
+| `0x8A150023` | `Cancelled`      | a quiet toast                       |
 
 Exit codes are not always populated, so the mapper also sniffs stderr for the
 cases users actually hit. The enum is serialised with
@@ -145,7 +145,7 @@ sites.
 ## Frontend notes
 
 **Events.** `useWingetEvents` tracks a `disposed` flag because `listen()` resolves
-*after* the effect's cleanup runs under StrictMode. Without it the first
+_after_ the effect's cleanup runs under StrictMode. Without it the first
 subscription leaks and every event arrives twice — which is exactly the duplicate
 log bug that shipped in the MVP. There is a regression test.
 
@@ -175,20 +175,20 @@ the language between cases.
 - **Capabilities are enumerated.** `capabilities/default.json` lists individual
   permissions rather than whole plugins.
 - **No inline shell.** `relaunch_elevated` binds the executable path as a
-  PowerShell *argument* rather than interpolating it into the script body.
+  PowerShell _argument_ rather than interpolating it into the script body.
 - **Only http(s) links open.** `open_url` refuses every other scheme.
 
 ## Testing
 
-| Layer                | Where                          | Runs in CI |
-| -------------------- | ------------------------------ | ---------- |
-| Parser, registry, errors | `src-tauri/src/**` unit tests | yes |
-| Property tests       | `proptest` in `winget.rs`      | yes |
-| Live winget          | `src-tauri/tests/integration.rs` | no — `#[ignore]`, needs winget |
-| Components           | `src/**/*.test.tsx`            | yes |
-| Whole app            | `src/App.test.tsx`             | yes |
-| Accessibility        | `src/a11y.test.tsx` via `axe-core` | yes |
-| Translations         | `src/i18n.test.ts` — key parity, placeholders, plurals | yes |
+| Layer                    | Where                                                  | Runs in CI                     |
+| ------------------------ | ------------------------------------------------------ | ------------------------------ |
+| Parser, registry, errors | `src-tauri/src/**` unit tests                          | yes                            |
+| Property tests           | `proptest` in `winget.rs`                              | yes                            |
+| Live winget              | `src-tauri/tests/integration.rs`                       | no — `#[ignore]`, needs winget |
+| Components               | `src/**/*.test.tsx`                                    | yes                            |
+| Whole app                | `src/App.test.tsx`                                     | yes                            |
+| Accessibility            | `src/a11y.test.tsx` via `axe-core`                     | yes                            |
+| Translations             | `src/i18n.test.ts` — key parity, placeholders, plurals | yes                            |
 
 Coverage thresholds are a ratchet set just under current numbers: they exist to
 stop coverage sliding backwards, not to describe a goal.

@@ -1,9 +1,9 @@
 # Default owner for everything in the repository.
-*       @rakjs
+*       @Rakjsu
 
 # The winget integration and the security-sensitive surface get extra eyes.
-/src-tauri/src/winget.rs    @rakjs
-/src-tauri/src/commands.rs  @rakjs
-/src-tauri/capabilities/    @rakjs
-/src-tauri/tauri.conf.json  @rakjs
-/.github/workflows/         @rakjs
+/src-tauri/src/winget.rs    @Rakjsu
+/src-tauri/src/commands.rs  @Rakjsu
+/src-tauri/capabilities/    @Rakjsu
+/src-tauri/tauri.conf.json  @Rakjsu
+/.github/workflows/         @Rakjsu

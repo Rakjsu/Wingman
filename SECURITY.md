@@ -6,8 +6,8 @@ Only the latest released version of Wingman receives security fixes. Older versi
 
 | Version | Supported |
 | ------- | :-------: |
-| latest  | ✅        |
-| older   | ❌        |
+| latest  |    ✅     |
+| older   |    ❌     |
 
 ## Reporting a vulnerability
 
@@ -15,7 +15,7 @@ Only the latest released version of Wingman receives security fixes. Older versi
 
 Instead, report privately via either:
 
-- GitHub's [private Security Advisory](https://github.com/rakjs/Wingman/security/advisories/new) form (preferred), or
+- GitHub's [private Security Advisory](https://github.com/Rakjsu/Wingman/security/advisories/new) form (preferred), or
 - Email to **rakjs@github.com** with the subject line `[security] Wingman <short title>`
 
 Please include:
@@ -54,11 +54,11 @@ sources.
 
 Kept locally, and never transmitted:
 
-| Data                                                    | Location                          | Retention |
-| ------------------------------------------------------- | --------------------------------- | --------- |
+| Data                                                                        | Location                      | Retention              |
+| --------------------------------------------------------------------------- | ----------------------------- | ---------------------- |
 | Operation logs, including the identifiers of packages you install or remove | `%LOCALAPPDATA%\Wingman\logs` | 14 days, rotated daily |
-| Theme, language, favorites, pins, operation history      | Local storage inside the app      | Until cleared |
-| Window size and position                                 | Tauri window-state plugin         | Until cleared |
+| Theme, language, favorites, pins, operation history                         | Local storage inside the app  | Until cleared          |
+| Window size and position                                                    | Tauri window-state plugin     | Until cleared          |
 
 The logs name the software on your machine, so treat them as personal data:
 review before attaching one to a public issue.
