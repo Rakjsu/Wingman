@@ -1,0 +1,31 @@
+# cargo-audit configuration.
+#
+# Ignores are documented, not silent: each one records why the advisory does not
+# reach a Wingman user, and what would make it matter again.
+
+[advisories]
+ignore = [
+    # RUSTSEC-2026-0194 — quick-xml: quadratic parsing of duplicate attributes
+    # RUSTSEC-2026-0195 — quick-xml: unbounded namespace allocation (memory DoS)
+    #
+    # Both arrive through: quick-xml -> plist -> tauri-utils -> tauri-codegen
+    #                                            -> tauri-macros (proc-macro)
+    #
+    # tauri-macros is a proc-macro crate, so this code runs on the build machine
+    # during compilation and is not linked into the shipped binary. The only XML
+    # it sees is our own tauri.conf.json and bundled assets — never anything a
+    # user or attacker supplies. Wingman parses no XML at runtime.
+    #
+    # plist 1.9 pins quick-xml to ^0.39, so the fix (>=0.41) has to come from
+    # upstream; `cargo update` cannot reach it.
+    #
+    # Revisit when: tauri-utils bumps plist, or if any runtime dependency starts
+    # pulling quick-xml in (check with
+    # `cargo tree -i quick-xml -e normal --target x86_64-pc-windows-msvc`).
+    "RUSTSEC-2026-0194",
+    "RUSTSEC-2026-0195",
+]
+
+# The GTK/atk "unmaintained" warnings come from Tauri's Linux backend, which a
+# Windows-only build never compiles. Warnings do not fail the run.
+informational_warnings = ["unmaintained", "unsound"]
