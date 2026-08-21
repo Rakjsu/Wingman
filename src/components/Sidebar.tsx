@@ -1,10 +1,11 @@
-import { t } from "../i18n";
+import { LANGUAGES, t, type Lang } from "../i18n";
 import type { ThemePreference } from "../hooks/useTheme";
 import {
   IconArrowUp,
   IconBox,
   IconClock,
   IconGrid,
+  IconInfo,
   IconMonitor,
   IconMoon,
   IconSun,
@@ -45,6 +46,9 @@ export function Sidebar({
   onToggleLog,
   logOpen,
   appVersion,
+  lang,
+  onLangChange,
+  onShowShortcuts,
 }: {
   active: Section;
   onChange: (section: Section) => void;
@@ -55,6 +59,9 @@ export function Sidebar({
   onToggleLog: () => void;
   logOpen: boolean;
   appVersion: string;
+  lang: Lang;
+  onLangChange: (lang: Lang) => void;
+  onShowShortcuts: () => void;
 }) {
   const renderGroup = (group: "library" | "activity") => (
     <>
@@ -113,6 +120,25 @@ export function Sidebar({
           <IconTerminal className="nav-icon" />
           <span className="nav-label">{logOpen ? t("log.hide") : t("log.show")}</span>
         </button>
+
+        <button type="button" className="nav-item nav-item-sm" onClick={onShowShortcuts}>
+          <IconInfo className="nav-icon" />
+          <span className="nav-label">{t("shortcuts.open")}</span>
+        </button>
+
+        <label className="lang-select">
+          <span className="sr-only">{t("lang.label")}</span>
+          <select
+            value={lang}
+            onChange={(event) => onLangChange(event.currentTarget.value as Lang)}
+          >
+            {LANGUAGES.map(({ code, label }) => (
+              <option key={code} value={code}>
+                {label}
+              </option>
+            ))}
+          </select>
+        </label>
 
         <div className="theme-switch" role="radiogroup" aria-label={t("theme.label")}>
           {THEMES.map(({ key, labelKey, Icon }) => (

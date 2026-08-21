@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 
 /** Persisted state that tolerates a corrupt or unavailable storage backend. */
 export function useLocalStorage<T>(key: string, initial: T) {
@@ -14,18 +14,26 @@ export function useLocalStorage<T>(key: string, initial: T) {
   useEffect(() => {
     try {
       window.localStorage.setItem(key, JSON.stringify(value));
-    } catch {
-      // Private mode or a full quota — keeping the in-memory value is enough.
+    } catch (error) {
+      // Private mode or a full quota. Keeping the in-memory value is enough to
+      // stay usable, but say so rather than failing silently.
+      console.warn(`wingman: could not persist "${key}"`, error);
     }
   }, [key, value]);
 
   return [value, setValue] as const;
 }
 
-/** A persisted set of string ids, with a toggle helper. */
+/**
+ * A persisted set of string ids.
+ *
+ * The Set is memoised on purpose: rebuilding it every render would give it a
+ * new identity, which cascades into new `rowState` callbacks and defeats the
+ * `memo` on every package row.
+ */
 export function useStringSet(key: string) {
   const [items, setItems] = useLocalStorage<string[]>(key, []);
-  const set = new Set(items);
+  const set = useMemo(() => new Set(items), [items]);
 
   const toggle = useCallback(
     (id: string) => {

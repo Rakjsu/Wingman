@@ -9,8 +9,15 @@ use tokio::process::Command;
 use tokio::sync::mpsc;
 use unicode_width::UnicodeWidthChar;
 
+/// winget 1.6 (App Installer 1.21) is the first release where every flag this
+/// app relies on is present — notably `--disable-interactivity`, which landed
+/// in 1.4, and a stable `upgrade --include-unknown`. Older builds would need
+/// interactive prompts we cannot answer from a GUI.
 pub const MIN_SUPPORTED_VERSION: (u32, u32) = (1, 6);
-const LIST_TIMEOUT_SECS: u64 = 60;
+/// Catalogue reads. Long enough for a cold source refresh over a slow link.
+const LIST_TIMEOUT_SECS: u64 = 90;
+/// An installer that has produced no output at all for this long is wedged.
+const ACTION_IDLE_TIMEOUT_SECS: u64 = 30 * 60;
 const MAX_QUERY_LEN: usize = 200;
 const SEARCH_CACHE_CAPACITY: usize = 20;
 const SEARCH_CACHE_TTL: Duration = Duration::from_secs(300);
@@ -92,9 +99,14 @@ pub fn validate_id(id: &str) -> Result<(), WingetError> {
 
 fn validate_query(query: &str) -> Result<(), WingetError> {
     if query.len() > MAX_QUERY_LEN {
-        return Err(WingetError::InvalidId(format!(
+        return Err(WingetError::InvalidQuery(format!(
             "query must be at most {MAX_QUERY_LEN} characters"
         )));
+    }
+    if query.chars().any(|c| c.is_control()) {
+        return Err(WingetError::InvalidQuery(
+            "query must not contain control characters".into(),
+        ));
     }
     Ok(())
 }
@@ -303,19 +315,30 @@ pub fn parse_show(output: &str, id: &str) -> PackageDetails {
         }
 
         let Some((key, value)) = trimmed.split_once(':') else {
-            // The first non-empty line is `Found <Name> [<Id>]`.
-            if let Some(rest) = trimmed.strip_prefix("Found ") {
-                if let Some(open) = rest.rfind('[') {
-                    details.name = rest[..open].trim().to_string();
+            // The banner line is `Found <Name> [<Id>]`. Match on the bracket
+            // rather than the word, so a localised "Found" still yields a name.
+            if details.name.is_empty() {
+                if let Some(open) = trimmed.rfind('[') {
+                    if trimmed.ends_with(']') {
+                        let head = &trimmed[..open];
+                        let name = head.split_once(' ').map_or(head, |(_, rest)| rest);
+                        details.name = name.trim().to_string();
+                    }
                 }
             }
             continue;
         };
+        let key = key.trim();
         let value = value.trim().to_string();
         if value.is_empty() {
             continue;
         }
-        match key.trim() {
+
+        // winget prints these field labels from the manifest schema, so they
+        // stay English even on a localised Windows (verified on a pt-BR system
+        // running winget 1.29). The structural fallbacks below still cover us
+        // if that ever changes.
+        match key {
             "Version" if details.version.is_none() => details.version = Some(value),
             "Publisher" => details.publisher = Some(value),
             "Description" | "Short Description" if details.description.is_none() => {
@@ -325,10 +348,30 @@ pub fn parse_show(output: &str, id: &str) -> PackageDetails {
                 details.homepage = Some(value)
             }
             "License" => details.license = Some(value),
-            _ => {}
+            _ => {
+                // Structural fallbacks for an unrecognised (possibly localised)
+                // label: the first bare URL becomes the homepage, and the first
+                // version-shaped value becomes the version.
+                if details.homepage.is_none()
+                    && (value.starts_with("https://") || value.starts_with("http://"))
+                    && !key.contains("Support")
+                    && !key.contains("Url")
+                {
+                    details.homepage = Some(value);
+                } else if details.version.is_none() && looks_like_version(&value) {
+                    details.version = Some(value);
+                }
+            }
         }
     }
     details
+}
+
+/// Digits and dots, e.g. `1.85.0` or `26.02`.
+fn looks_like_version(value: &str) -> bool {
+    !value.is_empty()
+        && value.chars().all(|c| c.is_ascii_digit() || c == '.')
+        && value.contains('.')
 }
 
 // ---------------------------------------------------------------------------
@@ -412,39 +455,70 @@ impl OpRegistry {
             .unwrap_or(false)
     }
 
+    fn take(&self, op_id: &str) -> Option<u32> {
+        self.pids.lock().ok()?.remove(op_id)
+    }
+
+    fn drain(&self) -> Vec<u32> {
+        match self.pids.lock() {
+            Ok(mut map) => map.drain().map(|(_, pid)| pid).collect(),
+            Err(_) => Vec::new(),
+        }
+    }
+
     /// Kill one operation and every process it spawned. winget launches the
     /// real installer as a child, so killing only winget leaves it running.
-    pub fn cancel(&self, op_id: &str) -> bool {
-        let pid = match self.pids.lock() {
-            Ok(mut pids) => pids.remove(op_id),
-            Err(_) => None,
-        };
-        match pid {
-            Some(pid) => kill_tree(pid),
+    ///
+    /// Async because `taskkill` can take a moment and this is invoked from a
+    /// Tauri command — a blocking wait there would freeze the window.
+    pub async fn cancel(&self, op_id: &str) -> bool {
+        match self.take(op_id) {
+            Some(pid) => kill_tree(pid).await,
             None => false,
         }
     }
 
     /// Used when the window closes so installs do not keep running invisibly.
-    pub fn cancel_all(&self) {
-        let pids: Vec<u32> = match self.pids.lock() {
-            Ok(mut map) => map.drain().map(|(_, pid)| pid).collect(),
-            Err(_) => Vec::new(),
-        };
-        for pid in pids {
-            kill_tree(pid);
+    ///
+    /// Tauri's window-event callback is synchronous, so shutdown currently
+    /// takes `cancel_all_blocking`; this stays for callers that do have a
+    /// runtime to await on.
+    #[allow(dead_code)]
+    pub async fn cancel_all(&self) {
+        for pid in self.drain() {
+            kill_tree(pid).await;
+        }
+    }
+
+    /// Blocking variant for shutdown paths that cannot await.
+    pub fn cancel_all_blocking(&self) {
+        for pid in self.drain() {
+            let _ = std::process::Command::new("taskkill")
+                .args(["/F", "/T", "/PID", &pid.to_string()])
+                .stdout(Stdio::null())
+                .stderr(Stdio::null())
+                .status();
         }
     }
 }
 
-fn kill_tree(pid: u32) -> bool {
-    std::process::Command::new("taskkill")
-        .args(["/F", "/T", "/PID", &pid.to_string()])
+async fn kill_tree(pid: u32) -> bool {
+    let mut cmd = Command::new("taskkill");
+    cmd.args(["/F", "/T", "/PID", &pid.to_string()])
         .stdout(Stdio::null())
-        .stderr(Stdio::null())
-        .status()
-        .map(|s| s.success())
-        .unwrap_or(false)
+        .stderr(Stdio::null());
+    #[cfg(windows)]
+    cmd.creation_flags(0x0800_0000);
+
+    match cmd.status().await {
+        Ok(status) => status.success(),
+        Err(e) => {
+            // Report the truth: if we could not kill it, the installer is still
+            // running and the UI must not claim the operation was cancelled.
+            tracing::error!(pid, error = %e, "taskkill failed");
+            false
+        }
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -591,33 +665,33 @@ pub async fn list_upgradable() -> Result<Vec<Package>, WingetError> {
 
 pub async fn show(id: &str) -> Result<PackageDetails, WingetError> {
     validate_id(id)?;
-    let out = run_capture_retrying(
-        &[
-            "show",
-            "--id",
-            id,
-            "--exact",
-            "--disable-interactivity",
-            "--accept-source-agreements",
-        ],
-        LIST_TIMEOUT_SECS,
-    )
-    .await?;
-    let mut details = parse_show(&out, id);
-    if let Ok(versions_out) = run_capture(
-        &[
-            "show",
-            "--id",
-            id,
-            "--exact",
-            "--versions",
-            "--disable-interactivity",
-            "--accept-source-agreements",
-        ],
-        LIST_TIMEOUT_SECS,
-    )
-    .await
-    {
+
+    // Metadata and the version list are two separate winget invocations; run
+    // them concurrently so the details dialog opens in one round trip.
+    let details_args = [
+        "show",
+        "--id",
+        id,
+        "--exact",
+        "--disable-interactivity",
+        "--accept-source-agreements",
+    ];
+    let versions_args = [
+        "show",
+        "--id",
+        id,
+        "--exact",
+        "--versions",
+        "--disable-interactivity",
+        "--accept-source-agreements",
+    ];
+    let (details_out, versions_out) = tokio::join!(
+        run_capture_retrying(&details_args, LIST_TIMEOUT_SECS),
+        run_capture(&versions_args, LIST_TIMEOUT_SECS)
+    );
+
+    let mut details = parse_show(&details_out?, id);
+    if let Ok(versions_out) = versions_out {
         let parsed = parse_show(&versions_out, id);
         if !parsed.versions.is_empty() {
             details.versions = parsed.versions;
@@ -713,7 +787,25 @@ pub async fn run_action(
     });
 
     let mut stderr_buf = String::new();
-    while let Some((line, is_stderr)) = rx.recv().await {
+    let mut timed_out = false;
+    loop {
+        // Bound the wait between lines, not the whole operation: a large
+        // install is legitimately slow, but one that has gone completely silent
+        // for half an hour is wedged and would otherwise pin the row forever.
+        let next =
+            tokio::time::timeout(Duration::from_secs(ACTION_IDLE_TIMEOUT_SECS), rx.recv()).await;
+        let (line, is_stderr) = match next {
+            Ok(Some(item)) => item,
+            Ok(None) => break,
+            Err(_) => {
+                tracing::error!(op_id, "operation produced no output; killing it");
+                timed_out = true;
+                if let Some(pid) = registry.take(op_id) {
+                    kill_tree(pid).await;
+                }
+                break;
+            }
+        };
         if is_stderr {
             stderr_buf.push_str(&line);
             stderr_buf.push('\n');
@@ -740,9 +832,14 @@ pub async fn run_action(
     }
 
     let status = child.wait().await?;
+    // `cancel` removes the pid before killing, so a missing entry means either
+    // the user cancelled or the idle watchdog fired.
     let was_cancelled = !registry.is_running(op_id);
     registry.unregister(op_id);
 
+    if timed_out {
+        return Err(WingetError::Timeout(ACTION_IDLE_TIMEOUT_SECS));
+    }
     if !status.success() {
         if was_cancelled {
             return Err(WingetError::Cancelled);
@@ -915,5 +1012,130 @@ License: MIT
             bytes.extend_from_slice(&c.to_le_bytes());
         }
         assert_eq!(decode(&bytes), "hi");
+    }
+
+    #[test]
+    fn parses_versions_from_show_versions_output() {
+        let out = "Found 7-Zip [7zip.7zip]
+Version
+-------
+26.02
+25.01
+24.09
+";
+        let details = parse_show(out, "7zip.7zip");
+        assert_eq!(details.versions, vec!["26.02", "25.01", "24.09"]);
+    }
+
+    #[test]
+    fn parses_show_with_unfamiliar_labels() {
+        // winget prints English labels even on a localised Windows (verified on
+        // pt-BR, winget 1.29). If that ever changes, the structural fallbacks
+        // still have to recover the name, homepage and version.
+        let out = "Encontrado 7-Zip [7zip.7zip]
+Versao: 26.02
+Editora: Igor Pavlov
+Pagina inicial: https://7-zip.org/download.html
+";
+        let details = parse_show(out, "7zip.7zip");
+        assert_eq!(details.name, "7-Zip");
+        assert_eq!(details.version.as_deref(), Some("26.02"));
+        assert_eq!(
+            details.homepage.as_deref(),
+            Some("https://7-zip.org/download.html")
+        );
+    }
+
+    #[test]
+    fn rejects_control_characters_in_queries() {
+        assert!(validate_query("normal query").is_ok());
+        assert!(validate_query("bad\u{0}query").is_err());
+        assert!(validate_query(&"x".repeat(MAX_QUERY_LEN + 1)).is_err());
+    }
+
+    #[test]
+    fn registry_tracks_and_forgets_operations() {
+        let registry = OpRegistry::default();
+        assert!(!registry.is_running("op"));
+
+        registry.register("op", 4242);
+        assert!(registry.is_running("op"));
+
+        assert_eq!(registry.take("op"), Some(4242));
+        assert!(!registry.is_running("op"));
+        assert_eq!(registry.take("op"), None);
+    }
+
+    #[test]
+    fn registry_drains_every_pid_once() {
+        let registry = OpRegistry::default();
+        registry.register("a", 1);
+        registry.register("b", 2);
+
+        let mut drained = registry.drain();
+        drained.sort_unstable();
+        assert_eq!(drained, vec![1, 2]);
+        assert!(registry.drain().is_empty());
+    }
+
+    #[test]
+    fn registry_unregister_is_idempotent() {
+        let registry = OpRegistry::default();
+        registry.register("op", 7);
+        registry.unregister("op");
+        registry.unregister("op");
+        assert!(!registry.is_running("op"));
+    }
+
+    #[test]
+    fn version_shape_detection() {
+        assert!(looks_like_version("1.85.0"));
+        assert!(looks_like_version("26.02"));
+        assert!(!looks_like_version("Igor Pavlov"));
+        assert!(!looks_like_version("2026"));
+        assert!(!looks_like_version(""));
+    }
+
+    proptest::proptest! {
+        /// The parser runs on whatever winget prints, including partially
+        /// written progress frames. It must never panic or hand back a row
+        /// with an empty id, whatever the input looks like.
+        #[test]
+        fn parser_never_panics_on_arbitrary_input(input in ".{0,2000}") {
+            let packages = parse_packages(&input);
+            for package in packages {
+                proptest::prop_assert!(!package.id.is_empty());
+            }
+        }
+
+        /// Well-formed tables must round-trip regardless of column padding.
+        #[test]
+        fn parses_generated_tables(
+            name in "[A-Za-z][A-Za-z ]{0,18}",
+            id in "[A-Za-z]{1,10}\\.[A-Za-z]{1,10}",
+            version in "[0-9]{1,3}\\.[0-9]{1,3}",
+            pad in 1usize..8,
+        ) {
+            let gap = " ".repeat(pad);
+            let name_width = name.chars().count().max(4) + pad;
+            let id_width = id.chars().count().max(2) + pad;
+            let table = format!(
+                "Name{}Id{}Version\n{}\n{:<nw$}{:<iw$}{}\n",
+                " ".repeat(name_width - 4),
+                " ".repeat(id_width - 2),
+                "-".repeat(name_width + id_width + 7),
+                name,
+                id,
+                version,
+                nw = name_width,
+                iw = id_width,
+            );
+            let _ = gap;
+            let packages = parse_packages(&table);
+            proptest::prop_assert_eq!(packages.len(), 1);
+            proptest::prop_assert_eq!(&packages[0].id, &id);
+            proptest::prop_assert_eq!(&packages[0].name, name.trim());
+            proptest::prop_assert_eq!(&packages[0].version, &version);
+        }
     }
 }

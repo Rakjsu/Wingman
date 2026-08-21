@@ -625,15 +625,25 @@ button {
   flex-shrink: 0;
 }
 
+/* Hue and size arrive as custom properties so the gradient itself stays here
+   rather than being generated as an inline background. */
 .pkg-icon {
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  width: var(--icon-size, 36px);
+  height: var(--icon-size, 36px);
+  font-size: calc(var(--icon-size, 36px) * 0.42);
   border-radius: 9px;
   color: #fff;
   font-weight: 650;
   flex-shrink: 0;
   box-shadow: var(--shadow-sm);
+  background: linear-gradient(
+    135deg,
+    hsl(var(--icon-hue, 220) 62% 52%),
+    hsl(calc(var(--icon-hue, 220) + 40) 62% 42%)
+  );
 }
 
 .row-main {
@@ -1380,5 +1390,216 @@ button {
 
   .content {
     padding: 16px;
+  }
+}
+
+/* ------------------------------------------------------------------ *
+ * Skip link
+ * ------------------------------------------------------------------ */
+
+.skip-link {
+  position: absolute;
+  left: 8px;
+  top: -48px;
+  z-index: 60;
+  padding: 8px 14px;
+  border-radius: var(--radius);
+  background: var(--accent);
+  color: #fff;
+  text-decoration: none;
+  transition: top 0.14s ease;
+}
+
+.skip-link:focus {
+  top: 8px;
+}
+
+/* ------------------------------------------------------------------ *
+ * Sidebar extras
+ * ------------------------------------------------------------------ */
+
+.lang-select select {
+  width: 100%;
+  padding: 7px 8px;
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text-soft);
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.check-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: var(--text-soft);
+  cursor: pointer;
+}
+
+.check-label input {
+  accent-color: var(--accent);
+  cursor: pointer;
+}
+
+/* ------------------------------------------------------------------ *
+ * Context menu
+ * ------------------------------------------------------------------ */
+
+.menu-scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 44;
+}
+
+.context-menu {
+  position: fixed;
+  z-index: 45;
+  min-width: 200px;
+  margin: 0;
+  padding: 4px;
+  list-style: none;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-lg);
+}
+
+.context-menu button {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 7px 10px;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--text);
+  font-size: 13px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.context-menu button:hover {
+  background: var(--surface-hover);
+}
+
+/* ------------------------------------------------------------------ *
+ * Shortcuts dialog
+ * ------------------------------------------------------------------ */
+
+.shortcuts {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 0;
+}
+
+.shortcut {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.shortcut dt {
+  display: flex;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.shortcut dd {
+  margin: 0;
+  color: var(--text-soft);
+  text-align: right;
+}
+
+kbd {
+  display: inline-block;
+  padding: 2px 7px;
+  border: 1px solid var(--border-strong);
+  border-bottom-width: 2px;
+  border-radius: 5px;
+  background: var(--surface-2);
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--text);
+}
+
+/* ------------------------------------------------------------------ *
+ * Crash screen
+ * ------------------------------------------------------------------ */
+
+.crash {
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 32px;
+  text-align: center;
+  background: var(--bg);
+  color: var(--text);
+}
+
+.crash h1 {
+  font-size: 19px;
+}
+
+.crash p {
+  max-width: 46ch;
+  color: var(--muted);
+}
+
+.crash-detail {
+  max-width: min(640px, 100%);
+  overflow-x: auto;
+  padding: 10px 14px;
+  border-radius: var(--radius);
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  font-family: var(--mono);
+  font-size: 12px;
+  color: var(--danger);
+  text-align: left;
+}
+
+.crash-actions {
+  display: flex;
+  gap: 8px;
+}
+
+/* ------------------------------------------------------------------ *
+ * Virtualised lists recycle rows; the entry animation would fire on each.
+ * ------------------------------------------------------------------ */
+
+.no-anim .row {
+  animation: none;
+}
+
+/* ------------------------------------------------------------------ *
+ * Higher contrast on request
+ * ------------------------------------------------------------------ */
+
+@media (prefers-contrast: more) {
+  :root,
+  :root[data-theme="light"] {
+    --muted: #3d4455;
+    --border: #9aa2b4;
+    --border-strong: #6c7488;
+  }
+
+  :root[data-theme="dark"] {
+    --muted: #ced5e4;
+    --border: #59627a;
+    --border-strong: #7c869e;
+  }
+
+  .btn,
+  .row,
+  .card {
+    border-width: 2px;
   }
 }

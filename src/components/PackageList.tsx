@@ -4,7 +4,8 @@ import { t } from "../i18n";
 import type { Package } from "../lib/types";
 import { PackageRow, type RowAction, type RowState } from "./PackageRow";
 
-const ROW_HEIGHT = 76;
+/** Roomy enough for a row carrying a chip; the virtualiser measures the rest. */
+const ROW_HEIGHT = 84;
 /** Below this count the plain list is cheaper than the virtualiser. */
 const VIRTUALIZE_THRESHOLD = 40;
 
@@ -20,14 +21,17 @@ export interface PackageListProps {
   onTogglePin?: (id: string) => void;
   onToggleSelect?: (id: string) => void;
   onDetails: (pkg: Package) => void;
+  onCopyId?: (id: string) => void;
+  onOpenHomepage?: (pkg: Package) => void;
 }
 
 export function PackageList(props: PackageListProps) {
   const { packages } = props;
   const parentRef = useRef<HTMLDivElement>(null);
+  const virtual = packages.length >= VIRTUALIZE_THRESHOLD;
 
   const virtualizer = useVirtualizer({
-    count: packages.length,
+    count: virtual ? packages.length : 0,
     getScrollElement: () => parentRef.current,
     estimateSize: () => ROW_HEIGHT,
     overscan: 8,
@@ -48,14 +52,21 @@ export function PackageList(props: PackageListProps) {
       onTogglePin={props.onTogglePin}
       onToggleSelect={props.onToggleSelect}
       onDetails={props.onDetails}
+      onCopyId={props.onCopyId}
+      onOpenHomepage={props.onOpenHomepage}
     />
   );
 
-  if (packages.length < VIRTUALIZE_THRESHOLD) {
+  if (!virtual) {
     return (
       <div className="list" aria-label={t("a11y.packageList")} role="list">
-        {packages.map((pkg) => (
-          <div role="listitem" key={pkg.id}>
+        {packages.map((pkg, index) => (
+          <div
+            role="listitem"
+            key={pkg.id}
+            aria-posinset={index + 1}
+            aria-setsize={packages.length}
+          >
             {renderRow(pkg)}
           </div>
         ))}
@@ -66,7 +77,9 @@ export function PackageList(props: PackageListProps) {
   return (
     <div
       ref={parentRef}
-      className="list list-virtual"
+      // Rows remount constantly while scrolling, so the entry animation is
+      // switched off here — it would fire on every recycled row.
+      className="list list-virtual no-anim"
       aria-label={t("a11y.packageList")}
       role="list"
     >
@@ -80,6 +93,10 @@ export function PackageList(props: PackageListProps) {
               role="listitem"
               ref={virtualizer.measureElement}
               data-index={item.index}
+              // Only a slice of the list is in the DOM, so the real position
+              // and total have to be stated for assistive tech.
+              aria-posinset={item.index + 1}
+              aria-setsize={packages.length}
               style={{
                 position: "absolute",
                 top: 0,

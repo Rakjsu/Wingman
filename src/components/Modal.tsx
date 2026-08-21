@@ -25,6 +25,7 @@ export function Modal({
   const titleId = useId();
   const panelRef = useRef<HTMLDivElement>(null);
   const restoreRef = useRef<HTMLElement | null>(null);
+  const backdropPressed = useRef(false);
 
   useEffect(() => {
     restoreRef.current = document.activeElement as HTMLElement | null;
@@ -60,14 +61,26 @@ export function Modal({
   }, [onClose]);
 
   return (
-    <div className="overlay" onMouseDown={onClose}>
+    <div
+      className="overlay"
+      // Only a press that both starts and ends on the backdrop counts as a
+      // dismiss; otherwise dragging a text selection out of the dialog closes it.
+      onMouseDown={(event) => {
+        if (event.target === event.currentTarget) backdropPressed.current = true;
+      }}
+      onMouseUp={(event) => {
+        if (backdropPressed.current && event.target === event.currentTarget) {
+          onClose();
+        }
+        backdropPressed.current = false;
+      }}
+    >
       <div
         ref={panelRef}
         className={`modal ${wide ? "modal-wide" : ""}`}
         role="dialog"
         aria-modal="true"
         aria-labelledby={titleId}
-        onMouseDown={(e) => e.stopPropagation()}
       >
         <header className="modal-head">
           <h2 id={titleId}>{title}</h2>

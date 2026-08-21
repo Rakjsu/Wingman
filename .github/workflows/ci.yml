@@ -37,10 +37,19 @@ jobs:
         run: npm run format:check
 
       - name: Unit tests
-        run: npm run test
+        run: npx vitest run --coverage
 
       - name: Build
         run: npm run build
+
+      - name: Upload coverage
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-coverage
+          path: coverage/
+          retention-days: 7
+          if-no-files-found: ignore
 
   backend:
     name: Backend
@@ -68,6 +77,17 @@ jobs:
         working-directory: src-tauri
         run: cargo test --lib
 
+      # GitHub's Windows images ship App Installer, so the tests that drive a
+      # real winget can run here. They take the source lock from each other, so
+      # they must not run in parallel. Non-blocking: the runner's winget build
+      # and network are outside our control.
+      - name: Integration tests against a real winget
+        working-directory: src-tauri
+        continue-on-error: true
+        run: |
+          winget --version
+          cargo test --test integration -- --ignored --test-threads=1
+
   audit:
     name: Dependency audit
     runs-on: ubuntu-latest
@@ -83,10 +103,17 @@ jobs:
       - run: npm audit --audit-level=high
 
       - uses: dtolnay/rust-toolchain@stable
+
       - name: cargo audit
         run: |
           cargo install cargo-audit --locked
           cd src-tauri && cargo audit
+
+      # Licence and provenance checks for the Rust dependency tree.
+      - name: cargo deny
+        run: |
+          cargo install cargo-deny --locked
+          cd src-tauri && cargo deny check licenses sources bans
 
   bundle:
     name: Bundle installer
@@ -114,6 +141,17 @@ jobs:
       - name: Build installers
         run: npm run tauri build
 
+      # Users have no signature to verify against yet, so publish digests.
+      - name: Checksums
+        shell: pwsh
+        run: |
+          $out = "src-tauri/target/release/bundle/SHA256SUMS.txt"
+          Get-ChildItem -Recurse src-tauri/target/release/bundle -Include *.msi,*.exe |
+            Get-FileHash -Algorithm SHA256 |
+            ForEach-Object { "$($_.Hash.ToLower())  $(Split-Path $_.Path -Leaf)" } |
+            Set-Content -Encoding utf8 $out
+          Get-Content $out
+
       - name: Publish release
         uses: softprops/action-gh-release@v2
         with:
@@ -122,3 +160,4 @@ jobs:
           files: |
             src-tauri/target/release/bundle/msi/*.msi
             src-tauri/target/release/bundle/nsis/*.exe
+            src-tauri/target/release/bundle/SHA256SUMS.txt

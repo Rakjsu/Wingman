@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import "./App.css";
 import { ConfirmDialog, type ConfirmRequest } from "./components/ConfirmDialog";
 import {
@@ -8,7 +8,6 @@ import {
   SkeletonList,
 } from "./components/Feedback";
 import { FeaturedGrid } from "./components/FeaturedGrid";
-import { HistoryList } from "./components/HistoryList";
 import {
   IconDownload,
   IconRefresh,
@@ -19,18 +18,19 @@ import {
 import { LogPanel, type LogLine } from "./components/LogPanel";
 import { Modal } from "./components/Modal";
 import { Onboarding } from "./components/Onboarding";
-import { PackageDetailsDrawer } from "./components/PackageDetailsDrawer";
 import { PackageList } from "./components/PackageList";
 import type { RowAction } from "./components/PackageRow";
+import { ShortcutsDialog } from "./components/ShortcutsDialog";
 import { Sidebar, type Section } from "./components/Sidebar";
 import { Toasts } from "./components/Toasts";
 import { FEATURED, findFeatured } from "./data/featured";
 import { useDebounced } from "./hooks/useDebounced";
 import { useLocalStorage, useStringSet } from "./hooks/useLocalStorage";
+import { useOperationQueue } from "./hooks/useOperationQueue";
 import { useTheme } from "./hooks/useTheme";
 import { useToasts } from "./hooks/useToasts";
 import { useWingetEvents } from "./hooks/useWingetEvents";
-import { t } from "./i18n";
+import { compareStrings, currentLang, setLang, t, type Lang } from "./i18n";
 import { api } from "./lib/api";
 import {
   errorMessage,
@@ -48,9 +48,19 @@ import type {
   WingetError,
 } from "./lib/types";
 
+// Neither is needed to paint the first screen.
+const PackageDetailsDrawer = lazy(() =>
+  import("./components/PackageDetailsDrawer").then((m) => ({
+    default: m.PackageDetailsDrawer,
+  })),
+);
+const HistoryList = lazy(() =>
+  import("./components/HistoryList").then((m) => ({ default: m.HistoryList })),
+);
+
 type LoadState = "idle" | "loading" | "error";
 interface BusyEntry {
-  action: string;
+  action: RowAction | "upgrade-all" | "import";
   percent: number | null;
   name: string;
 }
@@ -62,6 +72,7 @@ export default function App() {
   const { preference, setPreference } = useTheme();
   const { toasts, push, dismiss } = useToasts();
 
+  const [lang, setLangState] = useState<Lang>(() => currentLang());
   const [startup, setStartup] = useState<StartupInfo | null>(null);
   const [startupChecking, setStartupChecking] = useState(true);
 
@@ -77,9 +88,11 @@ export default function App() {
   const [installedState, setInstalledState] = useState<LoadState>("loading");
   const [installedFilter, setInstalledFilter] = useState("");
   const [sortKey, setSortKey] = useLocalStorage<SortKey>("wingman.sort", "name");
+  const [sortDesc, setSortDesc] = useLocalStorage("wingman.sortDesc", false);
 
   const [upgradable, setUpgradable] = useState<Package[]>([]);
   const [upgradableState, setUpgradableState] = useState<LoadState>("loading");
+  const [upgradesLoaded, setUpgradesLoaded] = useState(false);
 
   const [busy, setBusy] = useState<Record<string, BusyEntry>>({});
   const [logLines, setLogLines] = useState<LogLine[]>([]);
@@ -88,6 +101,7 @@ export default function App() {
   const [confirm, setConfirm] = useState<ConfirmRequest | null>(null);
   const [details, setDetails] = useState<Package | null>(null);
   const [elevation, setElevation] = useState(false);
+  const [shortcuts, setShortcuts] = useState(false);
   const [selection, setSelection] = useState<Set<string>>(new Set());
 
   const favorites = useStringSet("wingman.favorites");
@@ -96,8 +110,8 @@ export default function App() {
 
   const searchRef = useRef<HTMLInputElement>(null);
   const logId = useRef(0);
-  const batchQueue = useRef<string[]>([]);
   const lastUpdateCount = useRef(0);
+  const refreshTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // -- data loading ---------------------------------------------------------
 
@@ -118,6 +132,7 @@ export default function App() {
       const list = await api.listUpgradable();
       setUpgradable(list);
       setUpgradableState("idle");
+      setUpgradesLoaded(true);
       return list;
     } catch (e) {
       setError(toWingetError(e));
@@ -126,29 +141,74 @@ export default function App() {
     }
   }, []);
 
+  /** Coalesce the refreshes that follow a burst of queued operations. */
+  const scheduleRefresh = useCallback(() => {
+    if (refreshTimer.current) clearTimeout(refreshTimer.current);
+    refreshTimer.current = setTimeout(() => {
+      refreshTimer.current = null;
+      void loadInstalled();
+      void loadUpgradable();
+    }, 800);
+  }, [loadInstalled, loadUpgradable]);
+
+  useEffect(
+    () => () => {
+      if (refreshTimer.current) clearTimeout(refreshTimer.current);
+    },
+    [],
+  );
+
   const checkStartup = useCallback(async () => {
     setStartupChecking(true);
     try {
       const info = await api.checkWinget();
       setStartup(info);
-      if (!info.error) {
-        // Kick both lists off together instead of chaining them.
-        void Promise.all([loadInstalled(), loadUpgradable()]);
-      }
+      if (!info.error) void loadInstalled();
     } catch (e) {
-      setStartup({
-        error: toWingetError(e),
-        backend: "Cli",
-        winget_version: null,
-      });
+      setStartup({ error: toWingetError(e), backend: "Cli", winget_version: null });
     } finally {
       setStartupChecking(false);
     }
-  }, [loadInstalled, loadUpgradable]);
+  }, [loadInstalled]);
 
   useEffect(() => {
     void checkStartup();
   }, [checkStartup]);
+
+  // Upgrades are the slowest query, so only pay for it when the tab is opened.
+  useEffect(() => {
+    if (section === "updates" && !upgradesLoaded && !startup?.error) {
+      void loadUpgradable();
+    }
+  }, [section, upgradesLoaded, startup, loadUpgradable]);
+
+  // -- operation queue ------------------------------------------------------
+
+  const queue = useOperationQueue(
+    useCallback((op) => {
+      setBusy((prev) => ({
+        ...prev,
+        [op.id]: {
+          action: (op.label as BusyEntry["action"]) ?? "install",
+          percent: null,
+          name: op.id,
+        },
+      }));
+    }, []),
+  );
+
+  const finishBusy = useCallback(
+    (id: string) => {
+      setBusy((prev) => {
+        if (!(id in prev)) return prev;
+        const next = { ...prev };
+        delete next[id];
+        return next;
+      });
+      queue.complete(id);
+    },
+    [queue],
+  );
 
   // -- events ---------------------------------------------------------------
 
@@ -156,15 +216,6 @@ export default function App() {
     setLogLines((prev) => {
       const next = [...prev, { id: logId.current++, text, isError }];
       return next.length > MAX_LOG_LINES ? next.slice(-MAX_LOG_LINES) : next;
-    });
-  }, []);
-
-  const finishBusy = useCallback((id: string) => {
-    setBusy((prev) => {
-      if (!(id in prev)) return prev;
-      const next = { ...prev };
-      delete next[id];
-      return next;
     });
   }, []);
 
@@ -183,24 +234,9 @@ export default function App() {
     [appendLog],
   );
 
-  const runNextInBatch = useCallback(() => {
-    const next = batchQueue.current.shift();
-    if (!next) return;
-    const pkg = installed.find((p) => p.id === next);
-    setBusy((prev) => ({
-      ...prev,
-      [next]: { action: "uninstall", percent: null, name: pkg?.name || next },
-    }));
-    api.uninstall(next).catch((e) => {
-      setError(toWingetError(e));
-      finishBusy(next);
-    });
-  }, [installed, finishBusy]);
-
   const onDone = useCallback(
     (event: DoneEvent) => {
-      const entry = busy[event.id];
-      const name = entry?.name || findFeatured(event.id)?.name || event.id;
+      const name = busy[event.id]?.name || findFeatured(event.id)?.name || event.id;
       finishBusy(event.id);
 
       setHistory((prev) =>
@@ -228,8 +264,8 @@ export default function App() {
                   ? "toast.imported"
                   : "toast.upgradedAll";
         push(t(toastKey, { name }), "success");
-        void loadInstalled();
-        void loadUpgradable();
+        if (event.action === "import") push(t("import.skipped"), "info");
+        scheduleRefresh();
       } else if (event.error) {
         if (isCancellation(event.error)) {
           push(t("toast.cancelled"), "info");
@@ -239,10 +275,8 @@ export default function App() {
           setError(event.error);
         }
       }
-
-      if (batchQueue.current.length > 0) runNextInBatch();
     },
-    [busy, finishBusy, loadInstalled, loadUpgradable, push, setHistory, runNextInBatch],
+    [busy, finishBusy, push, setHistory, scheduleRefresh],
   );
 
   useWingetEvents(onProgress, onDone);
@@ -279,48 +313,65 @@ export default function App() {
 
   useEffect(() => {
     if (startup?.error) return;
-    const timer = setInterval(() => {
-      void loadUpgradable().then(async (list) => {
-        if (list.length > 0 && list.length !== lastUpdateCount.current) {
-          lastUpdateCount.current = list.length;
-          try {
-            const { isPermissionGranted, requestPermission, sendNotification } =
-              await import("@tauri-apps/plugin-notification");
-            let granted = await isPermissionGranted();
-            if (!granted) granted = (await requestPermission()) === "granted";
-            if (granted) {
-              sendNotification({
-                title: t("app.title"),
-                body: t("toast.updatesAvailable", { n: list.length }),
-              });
-            }
-          } catch {
-            // Notifications are a nicety; the badge already shows the count.
-          }
+
+    const notifyIfNeeded = async (count: number) => {
+      if (count === 0 || count === lastUpdateCount.current) return;
+      lastUpdateCount.current = count;
+      try {
+        const { isPermissionGranted, requestPermission, sendNotification } =
+          await import("@tauri-apps/plugin-notification");
+        let granted = await isPermissionGranted();
+        if (!granted) granted = (await requestPermission()) === "granted";
+        if (granted) {
+          sendNotification({
+            title: t("app.title"),
+            body: t("toast.updatesAvailable", { n: count }),
+          });
         }
-      });
+      } catch (e) {
+        console.warn("wingman: notification unavailable", e);
+      }
+    };
+
+    // Check once at startup rather than making the user wait a whole interval.
+    const first = setTimeout(() => {
+      void loadUpgradable().then((list) => void notifyIfNeeded(list.length));
+    }, 4000);
+    const timer = setInterval(() => {
+      void loadUpgradable().then((list) => void notifyIfNeeded(list.length));
     }, UPDATE_POLL_MS);
-    return () => clearInterval(timer);
+
+    return () => {
+      clearTimeout(first);
+      clearInterval(timer);
+    };
   }, [loadUpgradable, startup]);
 
   // -- shortcuts ------------------------------------------------------------
 
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
+      const target = event.target as HTMLElement | null;
+      const typing =
+        target?.tagName === "INPUT" ||
+        target?.tagName === "TEXTAREA" ||
+        target?.isContentEditable;
       const ctrl = event.ctrlKey || event.metaKey;
-      if (ctrl && event.key.toLowerCase() === "f") {
+
+      if (ctrl && (event.key.toLowerCase() === "f" || event.key.toLowerCase() === "k")) {
         event.preventDefault();
         setSection("discover");
         setTimeout(() => searchRef.current?.focus(), 0);
       } else if (ctrl && ["1", "2", "3", "4"].includes(event.key)) {
         event.preventDefault();
-        const map: Record<string, Section> = {
-          "1": "discover",
-          "2": "installed",
-          "3": "updates",
-          "4": "history",
-        };
-        setSection(map[event.key]);
+        setSection(
+          (
+            { "1": "discover", "2": "installed", "3": "updates", "4": "history" } as const
+          )[event.key as "1" | "2" | "3" | "4"],
+        );
+      } else if (event.key === "?" && !typing) {
+        event.preventDefault();
+        setShortcuts(true);
       } else if (event.key === "Escape") {
         setError(null);
       }
@@ -333,19 +384,7 @@ export default function App() {
 
   const installedIds = useMemo(() => new Set(installed.map((p) => p.id)), [installed]);
   const busyIds = useMemo(() => new Set(Object.keys(busy)), [busy]);
-
-  const sortPackages = useCallback(
-    (list: Package[]) =>
-      [...list].sort((a, b) => {
-        if (sortKey === "id") return a.id.localeCompare(b.id);
-        if (sortKey === "source")
-          return (
-            (a.source ?? "").localeCompare(b.source ?? "") || a.name.localeCompare(b.name)
-          );
-        return (a.name || a.id).localeCompare(b.name || b.id);
-      }),
-    [sortKey],
-  );
+  const queuedIds = useMemo(() => new Set(queue.pending), [queue.pending]);
 
   const visibleInstalled = useMemo(() => {
     const needle = installedFilter.trim().toLowerCase();
@@ -355,8 +394,18 @@ export default function App() {
             p.name.toLowerCase().includes(needle) || p.id.toLowerCase().includes(needle),
         )
       : installed;
-    return sortPackages(filtered);
-  }, [installed, installedFilter, sortPackages]);
+
+    const sorted = [...filtered].sort((a, b) => {
+      if (sortKey === "id") return compareStrings(a.id, b.id);
+      if (sortKey === "source")
+        return (
+          compareStrings(a.source ?? "", b.source ?? "") ||
+          compareStrings(a.name || a.id, b.name || b.id)
+        );
+      return compareStrings(a.name || a.id, b.name || b.id);
+    });
+    return sortDesc ? sorted.reverse() : sorted;
+  }, [installed, installedFilter, sortKey, sortDesc]);
 
   const favoriteEntries = useMemo(
     () => FEATURED.filter((p) => favorites.set.has(p.id)),
@@ -366,36 +415,43 @@ export default function App() {
   const rowState = useCallback(
     (pkg: Package) => ({
       busy: busyIds.has(pkg.id),
+      queued: queuedIds.has(pkg.id),
       percent: busy[pkg.id]?.percent ?? null,
       installed: installedIds.has(pkg.id),
       favorite: favorites.set.has(pkg.id),
       pinned: pins.set.has(pkg.id),
       selected: selection.has(pkg.id),
     }),
-    [busy, busyIds, installedIds, favorites.set, pins.set, selection],
+    [busy, busyIds, queuedIds, installedIds, favorites.set, pins.set, selection],
   );
 
   // -- actions --------------------------------------------------------------
 
-  const startAction = useCallback(
+  const enqueueAction = useCallback(
     (action: RowAction, pkg: Package, version?: string) => {
       setError(null);
-      setBusy((prev) => ({
-        ...prev,
-        [pkg.id]: { action, percent: null, name: pkg.name || pkg.id },
-      }));
-      const call =
-        action === "install"
-          ? api.install(pkg.id, version)
-          : action === "uninstall"
-            ? api.uninstall(pkg.id)
-            : api.upgrade(pkg.id);
-      call.catch((e) => {
-        setError(toWingetError(e));
-        finishBusy(pkg.id);
+      queue.enqueue({
+        id: pkg.id,
+        label: action,
+        run: () =>
+          (action === "install"
+            ? api.install(pkg.id, version)
+            : action === "uninstall"
+              ? api.uninstall(pkg.id)
+              : api.upgrade(pkg.id)
+          ).catch((e) => {
+            setError(toWingetError(e));
+            finishBusy(pkg.id);
+          }),
       });
+      // The queue only knows ids; carry the display name for toasts.
+      setBusy((prev) =>
+        prev[pkg.id]
+          ? { ...prev, [pkg.id]: { ...prev[pkg.id], name: pkg.name || pkg.id } }
+          : prev,
+      );
     },
-    [finishBusy],
+    [queue, finishBusy],
   );
 
   const handleAction = useCallback(
@@ -406,44 +462,62 @@ export default function App() {
           body: t("confirm.uninstall.body"),
           confirmLabel: t("action.uninstall"),
           destructive: true,
-          onConfirm: () => startAction("uninstall", pkg),
+          onConfirm: () => enqueueAction("uninstall", pkg),
         });
         return;
       }
-      startAction(action, pkg);
+      enqueueAction(action, pkg);
     },
-    [startAction],
+    [enqueueAction],
   );
 
   const handleCancel = useCallback(
     (pkg: Package) => {
-      void api.cancel(pkg.id).then((stopped) => {
-        if (stopped) finishBusy(pkg.id);
-      });
+      const percent = busy[pkg.id]?.percent ?? 0;
+      const stop = () => {
+        void api.cancel(pkg.id).then((stopped) => {
+          if (stopped) finishBusy(pkg.id);
+        });
+      };
+      // Losing a nearly-finished install is worth one question.
+      if (percent >= 80) {
+        setConfirm({
+          title: t("confirm.cancel.title", { name: pkg.name || pkg.id }),
+          body: t("confirm.cancel.body", { percent }),
+          confirmLabel: t("confirm.cancel.action"),
+          destructive: true,
+          onConfirm: stop,
+        });
+        return;
+      }
+      queue.remove(pkg.id);
+      stop();
     },
-    [finishBusy],
+    [busy, finishBusy, queue],
   );
 
-  const handleInstallById = useCallback(
-    (id: string, version?: string) => {
+  const packageFor = useCallback(
+    (id: string): Package => {
       const known =
         searchResults.find((p) => p.id === id) ??
         installed.find((p) => p.id === id) ??
         upgradable.find((p) => p.id === id);
+      if (known) return known;
       const featured = findFeatured(id);
-      startAction(
-        "install",
-        known ?? {
-          id,
-          name: featured?.name ?? id,
-          version: "",
-          available: null,
-          source: null,
-        },
-        version,
-      );
+      return {
+        id,
+        name: featured?.name ?? id,
+        version: "",
+        available: null,
+        source: null,
+      };
     },
-    [searchResults, installed, upgradable, startAction],
+    [searchResults, installed, upgradable],
+  );
+
+  const handleInstallById = useCallback(
+    (id: string, version?: string) => enqueueAction("install", packageFor(id), version),
+    [enqueueAction, packageFor],
   );
 
   const handleUpgradeAll = useCallback(() => {
@@ -456,35 +530,45 @@ export default function App() {
       confirmLabel: t("updates.upgradeAll"),
       onConfirm: () => {
         setError(null);
-        setBusy((prev) => ({
-          ...prev,
-          "*": { action: "upgrade-all", percent: null, name: t("updates.upgradeAll") },
-        }));
-        api.upgradeAll().catch((e) => {
-          setError(toWingetError(e));
-          finishBusy("*");
+        queue.enqueue({
+          id: "*",
+          label: "upgrade-all",
+          run: () =>
+            api.upgradeAll().catch((e) => {
+              setError(toWingetError(e));
+              finishBusy("*");
+            }),
         });
       },
     });
-  }, [upgradable, pins.set, finishBusy]);
+  }, [upgradable, pins.set, queue, finishBusy]);
 
   const handleBatchUninstall = useCallback(() => {
     const ids = [...selection];
     if (ids.length === 0) return;
-    const names = ids.map((id) => installed.find((p) => p.id === id)?.name || id);
     setConfirm({
       title: t("confirm.uninstallMany.title", { n: ids.length }),
       body: t("confirm.uninstallMany.body"),
-      items: names,
+      items: ids.map((id) => installed.find((p) => p.id === id)?.name || id),
       confirmLabel: t("action.uninstall"),
       destructive: true,
       onConfirm: () => {
         setSelection(new Set());
-        batchQueue.current = [...ids];
-        runNextInBatch();
+        // The queue runs these one at a time, which is what winget requires.
+        queue.enqueue(
+          ids.map((id) => ({
+            id,
+            label: "uninstall",
+            run: () =>
+              api.uninstall(id).catch((e) => {
+                setError(toWingetError(e));
+                finishBusy(id);
+              }),
+          })),
+        );
       },
     });
-  }, [selection, installed, runNextInBatch]);
+  }, [selection, installed, queue, finishBusy]);
 
   const handleExport = useCallback(async () => {
     try {
@@ -515,21 +599,38 @@ export default function App() {
         title: t("confirm.import.title"),
         body: t("confirm.import.body"),
         confirmLabel: t("installed.import"),
-        onConfirm: () => {
-          setBusy((prev) => ({
-            ...prev,
-            "*": { action: "import", percent: null, name: t("installed.import") },
-          }));
-          api.importList(path).catch((e) => {
-            setError(toWingetError(e));
-            finishBusy("*");
-          });
-        },
+        onConfirm: () =>
+          queue.enqueue({
+            id: "*",
+            label: "import",
+            run: () =>
+              api.importList(path).catch((e) => {
+                setError(toWingetError(e));
+                finishBusy("*");
+              }),
+          }),
       });
     } catch (e) {
       setError(toWingetError(e));
     }
-  }, [finishBusy]);
+  }, [queue, finishBusy]);
+
+  const copyId = useCallback(
+    (id: string) => {
+      navigator.clipboard
+        .writeText(id)
+        .then(() => push(t("toast.copiedId"), "success"))
+        .catch((e) => console.warn("wingman: clipboard unavailable", e));
+    },
+    [push],
+  );
+
+  const openHomepage = useCallback((pkg: Package) => {
+    api
+      .show(pkg.id)
+      .then((d) => (d.homepage ? api.openUrl(d.homepage) : undefined))
+      .catch((e) => setError(toWingetError(e)));
+  }, []);
 
   const toggleSelect = useCallback((id: string) => {
     setSelection((prev) => {
@@ -538,6 +639,11 @@ export default function App() {
       else next.add(id);
       return next;
     });
+  }, []);
+
+  const changeLang = useCallback((next: Lang) => {
+    setLang(next);
+    setLangState(next);
   }, []);
 
   // -- render ---------------------------------------------------------------
@@ -555,11 +661,26 @@ export default function App() {
     );
   }
 
-  const searchCount = searchResults.length;
   const showFeatured = section === "discover" && debouncedQuery.trim().length < 2;
 
+  const listHandlers = {
+    rowState,
+    onAction: handleAction,
+    onCancel: handleCancel,
+    onToggleFavorite: favorites.toggle,
+    onDetails: setDetails,
+    onCopyId: copyId,
+    onOpenHomepage: openHomepage,
+  };
+
   return (
-    <div className={`app ${logOpen ? "with-log" : ""}`}>
+    // Remounting on language change is what makes the switch take effect: `t`
+    // is a plain function, so nothing else would re-read the dictionary.
+    <div className={`app ${logOpen ? "with-log" : ""}`} key={lang}>
+      <a className="skip-link" href="#main">
+        {t("a11y.skip")}
+      </a>
+
       <Sidebar
         active={section}
         onChange={setSection}
@@ -570,9 +691,12 @@ export default function App() {
         onToggleLog={() => setLogOpen((v) => !v)}
         logOpen={logOpen}
         appVersion={startup?.appVersion ?? startup?.app_version ?? "0.1.0"}
+        lang={lang}
+        onLangChange={changeLang}
+        onShowShortcuts={() => setShortcuts(true)}
       />
 
-      <main className="content">
+      <main className="content" id="main">
         {error && (
           <ErrorBanner
             message={errorMessage(error)}
@@ -629,9 +753,9 @@ export default function App() {
             <p className="status-line" aria-live="polite">
               {searchState === "loading"
                 ? t("search.loading")
-                : !showFeatured
-                  ? t("search.results", { n: searchCount })
-                  : ""}
+                : showFeatured
+                  ? ""
+                  : t("search.results", { n: searchResults.length })}
             </p>
 
             {showFeatured ? (
@@ -645,7 +769,7 @@ export default function App() {
               />
             ) : searchState === "loading" ? (
               <SkeletonList />
-            ) : searchCount === 0 ? (
+            ) : searchResults.length === 0 ? (
               <EmptyState
                 icon="🔍"
                 title={t("search.empty", { q: debouncedQuery.trim() })}
@@ -654,15 +778,12 @@ export default function App() {
               <PackageList
                 packages={searchResults}
                 action="install"
-                rowState={rowState}
+                {...listHandlers}
                 onAction={(action, pkg) =>
                   installedIds.has(pkg.id)
                     ? handleAction("uninstall", pkg)
                     : handleAction(action, pkg)
                 }
-                onCancel={handleCancel}
-                onToggleFavorite={favorites.toggle}
-                onDetails={setDetails}
               />
             )}
           </>
@@ -693,6 +814,16 @@ export default function App() {
                   <option value="source">{t("sort.source")}</option>
                 </select>
               </label>
+              <button
+                type="button"
+                className="btn btn-ghost"
+                aria-pressed={sortDesc}
+                title={t("sort.direction")}
+                onClick={() => setSortDesc((v) => !v)}
+              >
+                {sortDesc ? "↓" : "↑"}
+                <span className="sr-only">{t("sort.direction")}</span>
+              </button>
               <button
                 type="button"
                 className="btn btn-ghost"
@@ -747,13 +878,9 @@ export default function App() {
               <PackageList
                 packages={visibleInstalled}
                 action="uninstall"
-                rowState={rowState}
                 selectable
-                onAction={handleAction}
-                onCancel={handleCancel}
-                onToggleFavorite={favorites.toggle}
                 onToggleSelect={toggleSelect}
-                onDetails={setDetails}
+                {...listHandlers}
               />
             )}
           </>
@@ -790,20 +917,22 @@ export default function App() {
               <PackageList
                 packages={upgradable}
                 action="upgrade"
-                rowState={rowState}
                 showPin
-                onAction={handleAction}
-                onCancel={handleCancel}
-                onToggleFavorite={favorites.toggle}
                 onTogglePin={pins.toggle}
-                onDetails={setDetails}
+                {...listHandlers}
               />
             )}
           </>
         )}
 
         {section === "history" && (
-          <HistoryList entries={history} onClear={() => setHistory([])} />
+          <Suspense fallback={<SkeletonList rows={4} />}>
+            <HistoryList
+              entries={history}
+              onClear={() => setHistory([])}
+              onReinstall={handleInstallById}
+            />
+          </Suspense>
         )}
 
         {startupChecking && !startup && <SkeletonGrid />}
@@ -821,14 +950,17 @@ export default function App() {
       <Toasts toasts={toasts} onDismiss={dismiss} />
 
       {confirm && <ConfirmDialog request={confirm} onClose={() => setConfirm(null)} />}
+      {shortcuts && <ShortcutsDialog onClose={() => setShortcuts(false)} />}
 
       {details && (
-        <PackageDetailsDrawer
-          pkg={details}
-          installed={installedIds.has(details.id)}
-          onClose={() => setDetails(null)}
-          onInstallVersion={handleInstallById}
-        />
+        <Suspense fallback={null}>
+          <PackageDetailsDrawer
+            pkg={details}
+            installed={installedIds.has(details.id)}
+            onClose={() => setDetails(null)}
+            onInstallVersion={handleInstallById}
+          />
+        </Suspense>
       )}
 
       {elevation && (

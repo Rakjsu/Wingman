@@ -1,4 +1,4 @@
-export type Lang = "en" | "pt";
+export type Lang = "en" | "pt" | "es";
 
 const en = {
   "app.title": "Wingman",
@@ -14,7 +14,7 @@ const en = {
   "search.placeholder": "Search packages…",
   "search.hint": "Type at least 2 characters",
   "search.loading": "Searching…",
-  "search.results": "{n} results",
+  "search.results": "{n} result|{n} results",
   "search.empty": "No packages matched “{q}”.",
   "search.clear": "Clear search",
 
@@ -27,11 +27,11 @@ const en = {
 
   "installed.refresh": "Refresh",
   "installed.empty": "Nothing installed through winget yet.",
-  "installed.count": "{n} installed",
+  "installed.count": "{n} installed|{n} installed",
   "installed.filter": "Filter installed…",
   "installed.export": "Export list",
   "installed.import": "Import list",
-  "installed.selected": "{n} selected",
+  "installed.selected": "{n} selected|{n} selected",
   "installed.uninstallSelected": "Uninstall selected",
   "installed.clearSelection": "Clear selection",
 
@@ -39,7 +39,7 @@ const en = {
   "updates.upgradeAll": "Update all",
   "updates.upgradingAll": "Updating all…",
   "updates.empty": "Everything is up to date.",
-  "updates.count": "{n} available",
+  "updates.count": "{n} available|{n} available",
   "updates.pin": "Skip in “Update all”",
   "updates.unpin": "Include in “Update all”",
   "updates.pinned": "Skipped",
@@ -75,9 +75,9 @@ const en = {
   "confirm.uninstall.title": "Remove {name}?",
   "confirm.uninstall.body":
     "This uninstalls the package from your computer. It can be reinstalled later from Discover.",
-  "confirm.uninstallMany.title": "Remove {n} packages?",
+  "confirm.uninstallMany.title": "Remove {n} package?|Remove {n} packages?",
   "confirm.uninstallMany.body": "These packages will be uninstalled one after another:",
-  "confirm.upgradeAll.title": "Update {n} packages?",
+  "confirm.upgradeAll.title": "Update {n} package?|Update {n} packages?",
   "confirm.upgradeAll.body": "Wingman will update the following packages:",
   "confirm.import.title": "Import this list?",
   "confirm.import.body":
@@ -115,7 +115,7 @@ const en = {
   "toast.exported": "List exported",
   "toast.imported": "List imported",
   "toast.copied": "Copied to clipboard",
-  "toast.updatesAvailable": "{n} updates available",
+  "toast.updatesAvailable": "{n} update available|{n} updates available",
 
   "error.title": "Something went wrong",
   "error.NotInstalled": "winget was not found on this computer.",
@@ -155,6 +155,27 @@ const en = {
   "a11y.selectPackage": "Select {name}",
 
   "shortcut.hint": "Ctrl+F search · Ctrl+1/2/3 sections · Esc close",
+
+  "lang.label": "Language",
+  "shortcuts.title": "Keyboard shortcuts",
+  "shortcuts.open": "Keyboard shortcuts",
+  "shortcuts.search": "Focus search",
+  "shortcuts.sections": "Switch section",
+  "shortcuts.close": "Close dialog or dismiss error",
+  "shortcuts.help": "Show this help",
+  "history.filter": "Filter history…",
+  "history.onlyFailures": "Failures only",
+  "history.reinstall": "Install again",
+  "sort.direction": "Reverse order",
+  "a11y.skip": "Skip to content",
+  "queue.waiting": "Queued",
+  "error.InvalidQuery": "That search query is not valid.",
+  "toast.copiedId": "Identifier copied",
+  "confirm.cancel.title": "Stop installing {name}?",
+  "confirm.cancel.body":
+    "It is already {percent}% done. Stopping now may leave a partial install behind.",
+  "confirm.cancel.action": "Stop it",
+  "import.skipped": "Packages unavailable in your sources were skipped.",
 } as const;
 
 export type TKey = keyof typeof en;
@@ -173,7 +194,7 @@ const pt: Record<TKey, string> = {
   "search.placeholder": "Buscar pacotes…",
   "search.hint": "Digite ao menos 2 caracteres",
   "search.loading": "Buscando…",
-  "search.results": "{n} resultados",
+  "search.results": "{n} resultado|{n} resultados",
   "search.empty": "Nenhum pacote encontrado para “{q}”.",
   "search.clear": "Limpar busca",
 
@@ -186,11 +207,11 @@ const pt: Record<TKey, string> = {
 
   "installed.refresh": "Atualizar",
   "installed.empty": "Nada instalado pelo winget ainda.",
-  "installed.count": "{n} instalados",
+  "installed.count": "{n} instalado|{n} instalados",
   "installed.filter": "Filtrar instalados…",
   "installed.export": "Exportar lista",
   "installed.import": "Importar lista",
-  "installed.selected": "{n} selecionados",
+  "installed.selected": "{n} selecionado|{n} selecionados",
   "installed.uninstallSelected": "Desinstalar selecionados",
   "installed.clearSelection": "Limpar seleção",
 
@@ -198,7 +219,7 @@ const pt: Record<TKey, string> = {
   "updates.upgradeAll": "Atualizar tudo",
   "updates.upgradingAll": "Atualizando tudo…",
   "updates.empty": "Tudo em dia.",
-  "updates.count": "{n} disponíveis",
+  "updates.count": "{n} disponível|{n} disponíveis",
   "updates.pin": "Ignorar em “Atualizar tudo”",
   "updates.unpin": "Incluir em “Atualizar tudo”",
   "updates.pinned": "Ignorado",
@@ -234,9 +255,9 @@ const pt: Record<TKey, string> = {
   "confirm.uninstall.title": "Remover {name}?",
   "confirm.uninstall.body":
     "Isso desinstala o pacote do seu computador. Dá para reinstalar depois pela aba Descobrir.",
-  "confirm.uninstallMany.title": "Remover {n} pacotes?",
+  "confirm.uninstallMany.title": "Remover {n} pacote?|Remover {n} pacotes?",
   "confirm.uninstallMany.body": "Estes pacotes serão desinstalados um após o outro:",
-  "confirm.upgradeAll.title": "Atualizar {n} pacotes?",
+  "confirm.upgradeAll.title": "Atualizar {n} pacote?|Atualizar {n} pacotes?",
   "confirm.upgradeAll.body": "O Wingman vai atualizar os seguintes pacotes:",
   "confirm.import.title": "Importar esta lista?",
   "confirm.import.body":
@@ -274,7 +295,7 @@ const pt: Record<TKey, string> = {
   "toast.exported": "Lista exportada",
   "toast.imported": "Lista importada",
   "toast.copied": "Copiado para a área de transferência",
-  "toast.updatesAvailable": "{n} atualizações disponíveis",
+  "toast.updatesAvailable": "{n} atualização disponível|{n} atualizações disponíveis",
 
   "error.title": "Algo deu errado",
   "error.NotInstalled": "O winget não foi encontrado neste computador.",
@@ -317,31 +338,327 @@ const pt: Record<TKey, string> = {
   "a11y.selectPackage": "Selecionar {name}",
 
   "shortcut.hint": "Ctrl+F buscar · Ctrl+1/2/3 seções · Esc fechar",
+
+  "lang.label": "Idioma",
+  "shortcuts.title": "Atalhos de teclado",
+  "shortcuts.open": "Atalhos de teclado",
+  "shortcuts.search": "Focar a busca",
+  "shortcuts.sections": "Trocar de seção",
+  "shortcuts.close": "Fechar diálogo ou dispensar erro",
+  "shortcuts.help": "Mostrar esta ajuda",
+  "history.filter": "Filtrar histórico…",
+  "history.onlyFailures": "Somente falhas",
+  "history.reinstall": "Instalar de novo",
+  "sort.direction": "Inverter ordem",
+  "a11y.skip": "Pular para o conteúdo",
+  "queue.waiting": "Na fila",
+  "error.InvalidQuery": "Essa busca não é válida.",
+  "toast.copiedId": "Identificador copiado",
+  "confirm.cancel.title": "Parar a instalação de {name}?",
+  "confirm.cancel.body":
+    "Já está em {percent}%. Parar agora pode deixar uma instalação pela metade.",
+  "confirm.cancel.action": "Parar",
+  "import.skipped": "Pacotes indisponíveis nas suas fontes foram pulados.",
 };
 
-const dictionaries: Record<Lang, Record<TKey, string>> = { en, pt };
+const es: Record<TKey, string> = {
+  "app.title": "Wingman",
+  "app.tagline": "Una interfaz amigable para winget",
+
+  "nav.discover": "Descubrir",
+  "nav.installed": "Instalados",
+  "nav.updates": "Actualizaciones",
+  "nav.history": "Historial",
+  "nav.section.library": "Biblioteca",
+  "nav.section.activity": "Actividad",
+
+  "search.placeholder": "Buscar paquetes…",
+  "search.hint": "Escribe al menos 2 caracteres",
+  "search.loading": "Buscando…",
+  "search.results": "{n} resultado|{n} resultados",
+  "search.empty": "Ningún paquete coincide con “{q}”.",
+  "search.clear": "Limpiar búsqueda",
+
+  "featured.title": "Paquetes populares",
+  "featured.subtitle": "Buenos puntos de partida",
+  "favorites.title": "Tus favoritos",
+  "favorites.add": "Añadir a favoritos",
+  "favorites.remove": "Quitar de favoritos",
+  "favorites.empty": "Marca un paquete con una estrella para fijarlo aquí.",
+
+  "installed.refresh": "Actualizar",
+  "installed.empty": "Todavía no hay nada instalado con winget.",
+  "installed.count": "{n} instalado|{n} instalados",
+  "installed.filter": "Filtrar instalados…",
+  "installed.export": "Exportar lista",
+  "installed.import": "Importar lista",
+  "installed.selected": "{n} seleccionado|{n} seleccionados",
+  "installed.uninstallSelected": "Desinstalar seleccionados",
+  "installed.clearSelection": "Limpiar selección",
+
+  "updates.refresh": "Comprobar de nuevo",
+  "updates.upgradeAll": "Actualizar todo",
+  "updates.upgradingAll": "Actualizando todo…",
+  "updates.empty": "Todo está al día.",
+  "updates.count": "{n} disponible|{n} disponibles",
+  "updates.pin": "Omitir en “Actualizar todo”",
+  "updates.unpin": "Incluir en “Actualizar todo”",
+  "updates.pinned": "Omitido",
+
+  "history.empty": "Aún no hay operaciones.",
+  "history.clear": "Limpiar historial",
+  "history.succeeded": "Correcto",
+  "history.failed": "Falló",
+
+  "sort.label": "Ordenar",
+  "sort.name": "Nombre",
+  "sort.id": "Identificador",
+  "sort.source": "Fuente",
+  "source.label": "Fuente",
+  "source.all": "Todas las fuentes",
+
+  "action.install": "Instalar",
+  "action.installing": "Instalando…",
+  "action.uninstall": "Desinstalar",
+  "action.uninstalling": "Quitando…",
+  "action.upgrade": "Actualizar",
+  "action.upgrading": "Actualizando…",
+  "action.installed": "Instalado",
+  "action.cancel": "Cancelar",
+  "action.details": "Detalles",
+  "action.copyId": "Copiar identificador",
+  "action.homepage": "Abrir sitio web",
+  "action.retry": "Reintentar",
+  "action.dismiss": "Descartar",
+  "action.close": "Cerrar",
+  "action.confirm": "Confirmar",
+
+  "confirm.uninstall.title": "¿Quitar {name}?",
+  "confirm.uninstall.body":
+    "Esto desinstala el paquete de tu equipo. Podrás reinstalarlo desde Descubrir.",
+  "confirm.uninstallMany.title": "¿Quitar {n} paquete?|¿Quitar {n} paquetes?",
+  "confirm.uninstallMany.body": "Estos paquetes se desinstalarán uno tras otro:",
+  "confirm.upgradeAll.title": "¿Actualizar {n} paquete?|¿Actualizar {n} paquetes?",
+  "confirm.upgradeAll.body": "Wingman actualizará los siguientes paquetes:",
+  "confirm.import.title": "¿Importar esta lista?",
+  "confirm.import.body":
+    "Se instalará todo paquete del archivo que aún no esté instalado.",
+
+  "details.title": "Detalles del paquete",
+  "details.publisher": "Editor",
+  "details.version": "Versión",
+  "details.license": "Licencia",
+  "details.homepage": "Sitio web",
+  "details.description": "Descripción",
+  "details.versions": "Versiones disponibles",
+  "details.loading": "Cargando detalles…",
+  "details.installVersion": "Instalar esta versión",
+
+  "log.title": "Registro de actividad",
+  "log.show": "Mostrar registro",
+  "log.hide": "Ocultar registro",
+  "log.clear": "Limpiar",
+  "log.copy": "Copiar",
+  "log.copied": "Registro copiado",
+  "log.open": "Abrir carpeta de registros",
+  "log.empty": "Nada registrado todavía.",
+
+  "theme.label": "Tema",
+  "theme.light": "Claro",
+  "theme.dark": "Oscuro",
+  "theme.system": "Sistema",
+
+  "toast.installed": "{name} instalado",
+  "toast.uninstalled": "{name} eliminado",
+  "toast.upgraded": "{name} actualizado",
+  "toast.upgradedAll": "Todos los paquetes actualizados",
+  "toast.cancelled": "Operación cancelada",
+  "toast.exported": "Lista exportada",
+  "toast.imported": "Lista importada",
+  "toast.copied": "Copiado al portapapeles",
+  "toast.updatesAvailable":
+    "{n} actualización disponible|{n} actualizaciones disponibles",
+
+  "error.title": "Algo salió mal",
+  "error.NotInstalled": "No se encontró winget en este equipo.",
+  "error.Unsupported": "Tu winget es demasiado antiguo para Wingman.",
+  "error.NotFound": "No se encontró ese paquete.",
+  "error.NeedsElevation": "Esta operación necesita permisos de administrador.",
+  "error.SourceBusy": "winget está ocupado con otra operación. Inténtalo en un momento.",
+  "error.Network": "Problema de red al contactar con la fuente de paquetes.",
+  "error.HashMismatch":
+    "El instalador no superó la comprobación de integridad y no se ejecutó.",
+  "error.NoApplicableInstaller":
+    "Ningún instalador de este paquete es compatible con tu sistema.",
+  "error.NoUpdateAvailable": "No hay una versión más nueva para instalar.",
+  "error.Cancelled": "La operación fue cancelada.",
+  "error.Timeout": "winget tardó demasiado en responder.",
+  "error.InvalidId": "Ese identificador de paquete no es válido.",
+  "error.CommandFailed": "winget informó de un error.",
+  "error.Io": "No se pudo comunicar con winget.",
+
+  "elevate.title": "Se necesitan permisos de administrador",
+  "elevate.body":
+    "Windows exige elevación para cambiar este paquete. Wingman puede reiniciarse como administrador.",
+  "elevate.action": "Reiniciar como administrador",
+  "elevate.later": "Ahora no",
+
+  "onboarding.title": "winget es obligatorio",
+  "onboarding.body":
+    "Wingman es una interfaz para el Administrador de paquetes de Windows. Instala “Instalador de aplicación” desde Microsoft Store y vuelve a abrir Wingman.",
+  "onboarding.action": "Abrir Microsoft Store",
+  "onboarding.retry": "Ya lo instalé — comprobar otra vez",
+  "onboarding.outdated":
+    "Wingman necesita winget {minimum} o posterior, pero encontró {found}. Actualiza “Instalador de aplicación” desde Microsoft Store.",
+
+  "a11y.mainNav": "Secciones principales",
+  "a11y.packageList": "Lista de paquetes",
+  "a11y.rowActions": "Acciones para {name}",
+  "a11y.progress": "Progreso de instalación de {name}",
+  "a11y.busy": "Procesando",
+  "a11y.selectPackage": "Seleccionar {name}",
+
+  "shortcut.hint": "Ctrl+F buscar · Ctrl+1/2/3 secciones · Esc cerrar",
+
+  "lang.label": "Idioma",
+  "shortcuts.title": "Atajos de teclado",
+  "shortcuts.open": "Atajos de teclado",
+  "shortcuts.search": "Enfocar la búsqueda",
+  "shortcuts.sections": "Cambiar de sección",
+  "shortcuts.close": "Cerrar diálogo o descartar error",
+  "shortcuts.help": "Mostrar esta ayuda",
+  "history.filter": "Filtrar historial…",
+  "history.onlyFailures": "Solo fallos",
+  "history.reinstall": "Instalar de nuevo",
+  "sort.direction": "Invertir orden",
+  "a11y.skip": "Saltar al contenido",
+  "queue.waiting": "En cola",
+  "error.InvalidQuery": "Esa búsqueda no es válida.",
+  "toast.copiedId": "Identificador copiado",
+  "confirm.cancel.title": "¿Detener la instalación de {name}?",
+  "confirm.cancel.body":
+    "Ya va por el {percent}%. Detenerla ahora puede dejar una instalación a medias.",
+  "confirm.cancel.action": "Detener",
+  "import.skipped": "Se omitieron los paquetes no disponibles en tus fuentes.",
+};
+
+export const dictionaries: Record<Lang, Record<TKey, string>> = { en, pt, es };
+
+export const LANGUAGES: { code: Lang; label: string }[] = [
+  { code: "en", label: "English" },
+  { code: "pt", label: "Português" },
+  { code: "es", label: "Español" },
+];
+
+const STORAGE_KEY = "wingman.lang";
 
 function detectLang(): Lang {
+  let stored: string | null = null;
+  try {
+    stored = window.localStorage.getItem(STORAGE_KEY);
+  } catch {
+    // Storage unavailable; fall back to the browser locale.
+  }
+  if (stored) {
+    const parsed = stored.replaceAll('"', "");
+    if (parsed in dictionaries) return parsed as Lang;
+  }
   const nav = typeof navigator !== "undefined" ? navigator.language : "en";
-  return nav.toLowerCase().startsWith("pt") ? "pt" : "en";
+  const lower = nav.toLowerCase();
+  if (lower.startsWith("pt")) return "pt";
+  if (lower.startsWith("es")) return "es";
+  return "en";
 }
 
 let lang: Lang = detectLang();
 
+/**
+ * Changes the active language. Callers must also re-render — `t` is a plain
+ * function, not a hook, so nothing subscribes to this on its own. `App` keeps
+ * the language in state and remounts its subtree, which is what makes a switch
+ * visible immediately.
+ */
 export function setLang(next: Lang) {
   lang = next;
+  try {
+    window.localStorage.setItem(STORAGE_KEY, next);
+  } catch {
+    // Not persisting a language preference is survivable.
+  }
 }
 
 export function currentLang(): Lang {
   return lang;
 }
 
+/**
+ * Look up a translated string.
+ *
+ * `count` triggers plural selection: a value of `{key}` may hold two forms
+ * separated by `|` (singular first), chosen with `Intl.PluralRules` so each
+ * language applies its own rules.
+ */
 export function t(key: TKey, vars?: Record<string, string | number>): string {
   let s: string = dictionaries[lang]?.[key] ?? en[key] ?? key;
+
+  if (s.includes("|") && vars && typeof vars.n === "number") {
+    const forms = s.split("|");
+    const rule = new Intl.PluralRules(lang).select(vars.n);
+    // Dictionaries carry "one|other"; anything else falls back to the last form.
+    s = rule === "one" ? forms[0] : (forms[forms.length - 1] ?? forms[0]);
+  }
+
   if (vars) {
     for (const [k, v] of Object.entries(vars)) {
-      s = s.split(`{${k}}`).join(String(v));
+      const formatted =
+        typeof v === "number" ? new Intl.NumberFormat(lang).format(v) : String(v);
+      s = s.split(`{${k}}`).join(formatted);
     }
   }
   return s;
+}
+
+/** "2 minutes ago" in the active language. */
+export function formatRelative(timestamp: number): string {
+  const seconds = Math.round((timestamp - Date.now()) / 1000);
+  const units: [Intl.RelativeTimeFormatUnit, number][] = [
+    ["second", 60],
+    ["minute", 60],
+    ["hour", 24],
+    ["day", 7],
+    ["week", 4.35],
+    ["month", 12],
+    ["year", Number.POSITIVE_INFINITY],
+  ];
+
+  let value = seconds;
+  for (const [unit, limit] of units) {
+    if (Math.abs(value) < limit) {
+      return new Intl.RelativeTimeFormat(lang, { numeric: "auto" }).format(
+        Math.round(value),
+        unit,
+      );
+    }
+    value /= limit;
+  }
+  return new Date(timestamp).toLocaleString(lang);
+}
+
+export function formatDateTime(timestamp: number): string {
+  return new Date(timestamp).toLocaleString(lang, {
+    dateStyle: "medium",
+    timeStyle: "short",
+  });
+}
+
+/** Collator reused across sorts; constructing one per comparison is costly. */
+let collatorLang: Lang = lang;
+let collator = new Intl.Collator(lang, { sensitivity: "base", numeric: true });
+
+export function compareStrings(a: string, b: string): number {
+  if (collatorLang !== lang) {
+    collatorLang = lang;
+    collator = new Intl.Collator(lang, { sensitivity: "base", numeric: true });
+  }
+  return collator.compare(a, b);
 }

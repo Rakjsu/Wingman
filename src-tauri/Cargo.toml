@@ -4,6 +4,8 @@ version = "0.1.0"
 description = "Wingman — a friendly GUI for winget"
 authors = ["rakjs"]
 edition = "2021"
+# 1.82 for `Option::is_none_or`, used by the table parser.
+rust-version = "1.82"
 license = "MIT"
 repository = "https://github.com/rakjs/Wingman"
 
@@ -24,6 +26,7 @@ tauri-plugin-opener = "2"
 tauri-plugin-dialog = "2"
 tauri-plugin-notification = "2"
 tauri-plugin-window-state = "2"
+tauri-plugin-single-instance = "2"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 tokio = { version = "1", features = ["process", "io-util", "macros", "rt-multi-thread", "sync", "time"] }
@@ -33,6 +36,9 @@ unicode-width = "0.2"
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 tracing-appender = "0.2"
+
+[dev-dependencies]
+proptest = "1"
 
 # Smaller, faster binaries for the shipped build.
 [profile.release]

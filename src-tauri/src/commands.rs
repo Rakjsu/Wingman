@@ -209,10 +209,13 @@ pub async fn upgrade_all(app: AppHandle, state: State<'_, AppState>) -> Result<(
     perform(app, registry, cache, "upgrade-all", "*".to_string(), args).await
 }
 
+/// Async so `taskkill` never blocks the window: synchronous Tauri commands run
+/// on the main thread.
 #[tauri::command]
-pub fn cancel(state: State<'_, AppState>, id: String) -> bool {
+pub async fn cancel(state: State<'_, AppState>, id: String) -> Result<bool, WingetError> {
     tracing::info!(op_id = %id, "cancel requested");
-    state.registry.cancel(&id)
+    let registry = state.registry.clone();
+    Ok(registry.cancel(&id).await)
 }
 
 // ---------------------------------------------------------------------------
@@ -255,23 +258,25 @@ pub async fn import_list(
 /// Relaunch Wingman elevated. Windows has no way to raise the privileges of a
 /// live process, so this starts a new elevated instance and exits this one.
 #[tauri::command]
-pub fn relaunch_elevated(app: AppHandle) -> Result<(), WingetError> {
+pub async fn relaunch_elevated(app: AppHandle) -> Result<(), WingetError> {
     let exe = std::env::current_exe().map_err(|e| WingetError::Io(e.to_string()))?;
     let exe = exe.to_string_lossy().to_string();
     tracing::info!(exe = %exe, "relaunching elevated");
 
-    let status = std::process::Command::new("powershell")
+    // The path is bound as an argument instead of being interpolated into the
+    // script body, so quotes inside it cannot alter the command. Async because
+    // the UAC consent prompt blocks until the user answers.
+    let status = tokio::process::Command::new("powershell")
         .args([
             "-NoProfile",
             "-WindowStyle",
             "Hidden",
             "-Command",
-            &format!(
-                "Start-Process -FilePath '{}' -Verb RunAs",
-                exe.replace('\'', "''")
-            ),
+            "Start-Process -FilePath $args[0] -Verb RunAs",
+            &exe,
         ])
         .status()
+        .await
         .map_err(|e| WingetError::Io(e.to_string()))?;
 
     if !status.success() {
@@ -294,7 +299,7 @@ pub fn open_log_dir(app: AppHandle) -> Result<(), WingetError> {
 pub fn open_url(app: AppHandle, url: String) -> Result<(), WingetError> {
     // Only ever follow http(s) links that came from package metadata.
     if !url.starts_with("https://") && !url.starts_with("http://") {
-        return Err(WingetError::InvalidId(
+        return Err(WingetError::InvalidQuery(
             "only http(s) URLs are allowed".into(),
         ));
     }

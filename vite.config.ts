@@ -33,6 +33,14 @@ export default defineConfig(async () => ({
       reporter: ["text", "lcov"],
       include: ["src/**/*.{ts,tsx}"],
       exclude: ["src/test/**", "src/**/*.d.ts", "src/main.tsx"],
+      // A ratchet set just under the current numbers: it exists to stop
+      // coverage sliding backwards, not to describe a goal.
+      thresholds: {
+        statements: 68,
+        branches: 70,
+        functions: 50,
+        lines: 68,
+      },
     },
   },
 }));

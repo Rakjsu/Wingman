@@ -56,6 +56,9 @@ pub enum WingetError {
     #[error("invalid package identifier: {0}")]
     InvalidId(String),
 
+    #[error("invalid search query: {0}")]
+    InvalidQuery(String),
+
     #[error("winget exited with code {code:#X}: {message}")]
     CommandFailed { code: i32, message: String },
 

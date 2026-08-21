@@ -40,5 +40,40 @@ pub fn init() -> Option<tracing_appender::non_blocking::WorkerGuard> {
         .init();
 
     tracing::info!(version = env!("CARGO_PKG_VERSION"), "Wingman starting");
+    purge_old_logs(&dir, MAX_LOG_AGE_DAYS);
     Some(guard)
+}
+
+/// Daily rotation alone grows without bound, so drop anything older than this.
+const MAX_LOG_AGE_DAYS: u64 = 14;
+
+fn purge_old_logs(dir: &std::path::Path, max_age_days: u64) {
+    let max_age = std::time::Duration::from_secs(max_age_days * 24 * 60 * 60);
+    let Ok(entries) = std::fs::read_dir(dir) else {
+        return;
+    };
+
+    for entry in entries.flatten() {
+        let path = entry.path();
+        if !path.is_file() {
+            continue;
+        }
+        // Only ever touch files this app wrote.
+        if !path
+            .file_name()
+            .and_then(|n| n.to_str())
+            .is_some_and(|n| n.starts_with("wingman.log"))
+        {
+            continue;
+        }
+        let Ok(modified) = entry.metadata().and_then(|m| m.modified()) else {
+            continue;
+        };
+        if modified.elapsed().is_ok_and(|age| age > max_age) {
+            match std::fs::remove_file(&path) {
+                Ok(()) => tracing::debug!(file = %path.display(), "purged old log"),
+                Err(e) => tracing::warn!(file = %path.display(), error = %e, "could not purge log"),
+            }
+        }
+    }
 }

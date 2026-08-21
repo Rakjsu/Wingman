@@ -22,6 +22,16 @@ pub fn run() {
     let registry = state.registry.clone();
 
     tauri::Builder::default()
+        // Two copies of Wingman would fight over winget's source lock, so a
+        // second launch just focuses the window that is already open.
+        .plugin(tauri_plugin_single_instance::init(|app, _argv, _cwd| {
+            tracing::info!("second instance launched; focusing the existing window");
+            if let Some(window) = app.get_webview_window("main") {
+                let _ = window.show();
+                let _ = window.unminimize();
+                let _ = window.set_focus();
+            }
+        }))
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_notification::init())
@@ -30,9 +40,11 @@ pub fn run() {
         .on_window_event(move |_window, event| {
             // winget spawns the real installer as a child process. Closing the
             // window without killing the tree leaves installs running invisibly.
+            // This runs on the shutdown path, where there is no runtime left to
+            // await on, so it uses the blocking variant deliberately.
             if let WindowEvent::CloseRequested { .. } = event {
                 tracing::info!("window closing; cancelling in-flight operations");
-                registry.cancel_all();
+                registry.cancel_all_blocking();
             }
         })
         .setup(|app| {

@@ -14,6 +14,7 @@ const pkg: Package = {
 
 const idleState: RowState = {
   busy: false,
+  queued: false,
   percent: null,
   installed: false,
   favorite: false,

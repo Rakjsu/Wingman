@@ -1,4 +1,5 @@
-import { useEffect, useRef } from "react";
+import { useVirtualizer } from "@tanstack/react-virtual";
+import { useEffect, useLayoutEffect, useRef } from "react";
 import { t } from "../i18n";
 import { api } from "../lib/api";
 import { IconCopy, IconExternal, IconTrash, IconX } from "./Icons";
@@ -8,6 +9,8 @@ export interface LogLine {
   text: string;
   isError: boolean;
 }
+
+const LINE_HEIGHT = 19;
 
 export function LogPanel({
   lines,
@@ -23,26 +26,37 @@ export function LogPanel({
   const bodyRef = useRef<HTMLDivElement>(null);
   const pinnedToBottom = useRef(true);
 
-  // Only autoscroll when the user has not scrolled up to read something.
+  const virtualizer = useVirtualizer({
+    count: lines.length,
+    getScrollElement: () => bodyRef.current,
+    estimateSize: () => LINE_HEIGHT,
+    overscan: 20,
+    getItemKey: (index) => lines[index]?.id ?? index,
+  });
+
+  // Follow the tail unless the user scrolled up to read something.
+  useLayoutEffect(() => {
+    if (pinnedToBottom.current && lines.length > 0) {
+      virtualizer.scrollToIndex(lines.length - 1, { align: "end" });
+    }
+  }, [lines.length, virtualizer]);
+
   useEffect(() => {
     const el = bodyRef.current;
-    if (el && pinnedToBottom.current) {
-      el.scrollTop = el.scrollHeight;
-    }
-  }, [lines]);
-
-  const onScroll = () => {
-    const el = bodyRef.current;
     if (!el) return;
-    pinnedToBottom.current = el.scrollHeight - el.scrollTop - el.clientHeight < 40;
-  };
+    const onScroll = () => {
+      pinnedToBottom.current = el.scrollHeight - el.scrollTop - el.clientHeight < 40;
+    };
+    el.addEventListener("scroll", onScroll, { passive: true });
+    return () => el.removeEventListener("scroll", onScroll);
+  }, []);
 
   const copy = async () => {
     try {
       await navigator.clipboard.writeText(lines.map((l) => l.text).join("\n"));
       onCopied();
-    } catch {
-      // Clipboard can be blocked; the log is still on screen and on disk.
+    } catch (error) {
+      console.warn("wingman: clipboard unavailable", error);
     }
   };
 
@@ -75,15 +89,34 @@ export function LogPanel({
           </button>
         </div>
       </header>
-      <div className="logpanel-body" ref={bodyRef} onScroll={onScroll} tabIndex={0}>
+
+      <div className="logpanel-body" ref={bodyRef} tabIndex={0}>
         {lines.length === 0 ? (
           <p className="muted logpanel-empty">{t("log.empty")}</p>
         ) : (
-          lines.map((line) => (
-            <div key={line.id} className={`logline ${line.isError ? "is-error" : ""}`}>
-              {line.text}
-            </div>
-          ))
+          <div style={{ height: virtualizer.getTotalSize(), position: "relative" }}>
+            {virtualizer.getVirtualItems().map((item) => {
+              const line = lines[item.index];
+              if (!line) return null;
+              return (
+                <div
+                  key={item.key}
+                  ref={virtualizer.measureElement}
+                  data-index={item.index}
+                  className={`logline ${line.isError ? "is-error" : ""}`}
+                  style={{
+                    position: "absolute",
+                    top: 0,
+                    left: 0,
+                    width: "100%",
+                    transform: `translateY(${item.start}px)`,
+                  }}
+                >
+                  {line.text}
+                </div>
+              );
+            })}
+          </div>
         )}
       </div>
     </section>

@@ -1,13 +1,14 @@
-import { memo } from "react";
+import { memo, useState } from "react";
 import { t } from "../i18n";
 import type { Package } from "../lib/types";
-import { IconInfo, IconPin, IconStar, IconX } from "./Icons";
+import { IconCopy, IconExternal, IconInfo, IconPin, IconStar, IconX } from "./Icons";
 import { PackageIcon } from "./PackageIcon";
 
 export type RowAction = "install" | "uninstall" | "upgrade";
 
 export interface RowState {
   busy: boolean;
+  queued: boolean;
   percent: number | null;
   installed: boolean;
   favorite: boolean;
@@ -15,23 +16,17 @@ export interface RowState {
   selected?: boolean;
 }
 
-const BUSY_LABEL: Record<
-  RowAction,
-  "action.installing" | "action.uninstalling" | "action.upgrading"
-> = {
+const BUSY_LABEL = {
   install: "action.installing",
   uninstall: "action.uninstalling",
   upgrade: "action.upgrading",
-};
+} as const;
 
-const IDLE_LABEL: Record<
-  RowAction,
-  "action.install" | "action.uninstall" | "action.upgrade"
-> = {
+const IDLE_LABEL = {
   install: "action.install",
   uninstall: "action.uninstall",
   upgrade: "action.upgrade",
-};
+} as const;
 
 function PackageRowInner({
   pkg,
@@ -45,6 +40,8 @@ function PackageRowInner({
   onTogglePin,
   onToggleSelect,
   onDetails,
+  onCopyId,
+  onOpenHomepage,
 }: {
   pkg: Package;
   action: RowAction;
@@ -57,14 +54,24 @@ function PackageRowInner({
   onTogglePin?: (id: string) => void;
   onToggleSelect?: (id: string) => void;
   onDetails: (pkg: Package) => void;
+  onCopyId?: (id: string) => void;
+  onOpenHomepage?: (pkg: Package) => void;
 }) {
-  const { busy, percent, installed, favorite, pinned, selected } = state;
+  const { busy, queued, percent, installed, favorite, pinned, selected } = state;
+  const [menu, setMenu] = useState<{ x: number; y: number } | null>(null);
   const displayName = pkg.name || pkg.id;
   const matchedOn = pkg.matchedOn ?? pkg.matched_on ?? null;
   const isInstallBlocked = action === "install" && installed;
 
   return (
-    <div className={`row ${busy ? "is-busy" : ""} ${selected ? "is-selected" : ""}`}>
+    <div
+      className={`row ${busy ? "is-busy" : ""} ${selected ? "is-selected" : ""}`}
+      onContextMenu={(event) => {
+        if (!onCopyId) return;
+        event.preventDefault();
+        setMenu({ x: event.clientX, y: event.clientY });
+      }}
+    >
       {selectable && onToggleSelect && (
         <input
           type="checkbox"
@@ -86,6 +93,9 @@ function PackageRowInner({
             <span className="chip chip-muted">
               <IconPin /> {t("updates.pinned")}
             </span>
+          )}
+          {queued && !busy && (
+            <span className="chip chip-ghost">{t("queue.waiting")}</span>
           )}
           {matchedOn && <span className="chip chip-ghost">{matchedOn}</span>}
         </div>
@@ -182,18 +192,69 @@ function PackageRowInner({
           <button
             type="button"
             className={`btn btn-${action}`}
-            disabled={isInstallBlocked}
+            disabled={isInstallBlocked || queued}
             onClick={() => onAction(action, pkg)}
           >
-            {isInstallBlocked ? t("action.installed") : t(IDLE_LABEL[action])}
+            {isInstallBlocked
+              ? t("action.installed")
+              : queued
+                ? t("queue.waiting")
+                : t(IDLE_LABEL[action])}
           </button>
         )}
       </div>
 
+      {menu && onCopyId && (
+        <>
+          <div className="menu-scrim" onClick={() => setMenu(null)} />
+          <ul className="context-menu" role="menu" style={{ left: menu.x, top: menu.y }}>
+            <li>
+              <button
+                type="button"
+                role="menuitem"
+                onClick={() => {
+                  onCopyId(pkg.id);
+                  setMenu(null);
+                }}
+              >
+                <IconCopy /> {t("action.copyId")}
+              </button>
+            </li>
+            <li>
+              <button
+                type="button"
+                role="menuitem"
+                onClick={() => {
+                  onDetails(pkg);
+                  setMenu(null);
+                }}
+              >
+                <IconInfo /> {t("action.details")}
+              </button>
+            </li>
+            {onOpenHomepage && (
+              <li>
+                <button
+                  type="button"
+                  role="menuitem"
+                  onClick={() => {
+                    onOpenHomepage(pkg);
+                    setMenu(null);
+                  }}
+                >
+                  <IconExternal /> {t("action.homepage")}
+                </button>
+              </li>
+            )}
+          </ul>
+        </>
+      )}
+
       {busy && (
         <span className="sr-only" aria-live="polite">
           {t(BUSY_LABEL[action])}
-          {percent !== null ? ` ${percent}%` : ""}
+          {/* Announce milestones only; every frame would flood a screen reader. */}
+          {percent !== null && percent % 25 === 0 ? ` ${percent}%` : ""}
         </span>
       )}
     </div>

@@ -1,58 +1,140 @@
 <div align="center">
-  <img src="public/wingman.svg" width="96" height="96" alt="Wingman logo" />
-  <h1>Wingman</h1>
-  <p><strong>A friendly GUI for <a href="https://learn.microsoft.com/en-us/windows/package-manager/winget/">winget</a>.</strong></p>
 
-  <p>
-    <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue.svg" alt="MIT license" /></a>
-    <img src="https://img.shields.io/badge/platform-Windows-0078D6?logo=windows" alt="Windows" />
-    <img src="https://img.shields.io/badge/built%20with-Tauri%202-24C8DB?logo=tauri" alt="Tauri 2" />
-    <img src="https://img.shields.io/badge/version-0.1.0-orange" alt="Version 0.1.0" />
-  </p>
+<img src="public/wingman.svg" width="104" height="104" alt="" />
+
+# Wingman
+
+**A friendly desktop front-end for the Windows Package Manager.**
+
+Search the winget catalogue, install and remove software, and keep everything
+up to date — without opening a terminal.
+
+[![License: MIT](https://img.shields.io/badge/license-MIT-4f6ef7.svg?style=flat-square)](LICENSE)
+[![Platform](https://img.shields.io/badge/platform-Windows%2010%20%2F%2011-0078D6?style=flat-square&logo=windows)](#requirements)
+[![Built with Tauri](https://img.shields.io/badge/built%20with-Tauri%202-24C8DB?style=flat-square&logo=tauri)](https://tauri.app/)
+[![Rust](https://img.shields.io/badge/rust-1.82%2B-CE422B?style=flat-square&logo=rust)](https://rustup.rs/)
+[![CI](https://img.shields.io/github/actions/workflow/status/rakjs/Wingman/ci.yml?branch=main&style=flat-square&label=CI)](https://github.com/rakjs/Wingman/actions)
+
 </div>
 
 ---
 
-Wingman is a lightweight desktop app that turns Windows' command-line package manager (`winget`) into a clean, fast UI. Search, install, uninstall, and update apps without touching a terminal.
+## Contents
+
+- [Why Wingman](#why-wingman)
+- [Features](#features)
+- [Screenshots](#screenshots)
+- [Install](#install)
+- [Requirements](#requirements)
+- [Build from source](#build-from-source)
+- [How it works](#how-it-works)
+- [Project layout](#project-layout)
+- [Keyboard shortcuts](#keyboard-shortcuts)
+- [Where your data lives](#where-your-data-lives)
+- [Troubleshooting](#troubleshooting)
+- [Contributing](#contributing)
+- [Roadmap](#roadmap)
+- [License](#license)
+
+---
+
+## Why Wingman
+
+`winget` is excellent and ships with Windows, but it is a command line. Wingman
+keeps everything that makes winget good — the official catalogue, silent
+installs, no bundled adware — and puts a real interface on top:
+
+|                        | `winget` CLI            | Wingman                                    |
+| ---------------------- | ----------------------- | ------------------------------------------ |
+| Browse the catalogue   | type exact queries      | search-as-you-type, curated categories     |
+| See what needs an update | run a command          | a live badge in the sidebar                |
+| Update everything      | one command, no preview | preview the list, pin what to skip         |
+| A failed install       | a hex error code        | a sentence, and the action that fixes it   |
+| Needs administrator    | rerun in an elevated shell | offers to relaunch itself                |
+| Long install           | watch the terminal      | progress bar, cancellable, logged to disk  |
+
+Wingman is a front-end, not a replacement: everything it does is a winget
+invocation you could have typed yourself.
 
 ## Features
 
-- **Discover** — search the winget catalogue, or browse curated picks grouped by category
-- **Installed** — filter, sort, uninstall one package or a whole selection at once
-- **Updates** — update packages individually or all together, with pins to skip the ones you handle yourself
-- **History** — every operation with its outcome and timestamp
-- **Details** — publisher, licence, description, homepage and per-version install
-- **Favorites** — star packages to keep them at the top of Discover
-- **Import / export** — carry your package list to a new machine
-- **Cancel anything** — stop a running install; the whole process tree goes with it
-- **Real progress** — live percentage parsed from winget, plus a copyable activity log
-- **Light, dark or system** theme
-- **Bilingual** — UI auto-detects PT-BR or EN from your system
-- **Keyboard-first** — `Ctrl+F` to search, `Ctrl+1..4` for sections, `Esc` to dismiss
-- **Handles elevation** — offers to relaunch as administrator when winget demands it
-- **Tiny binary** — native WebView2, no Electron bloat
+**Finding software**
+
+- Search-as-you-type across the winget catalogue, debounced and cached
+- Curated picks grouped by category (browsers, development, media, productivity, communication)
+- Filter by source (`winget` or `msstore`)
+- Star packages to keep them at the top
+
+**Managing what you have**
+
+- Filter and sort the installed list by name, identifier or source
+- Select several packages and remove them in one go
+- Package details: publisher, licence, description, homepage, and every installable version
+- Export your package list and import it on another machine
+
+**Staying current**
+
+- Sidebar badge showing how many updates are waiting
+- Update one package or all of them, with a preview of exactly what will change
+- Pin a package to keep "Update all" away from it
+- A background check every six hours with a native notification
+
+**While it runs**
+
+- A real progress bar, read from winget's own output
+- Cancel any operation — Wingman kills the whole process tree, not just winget
+- A live activity log you can copy, plus daily rotated logs on disk
+- Failures explain themselves, and offer to relaunch as administrator when that is the actual problem
+
+**The details**
+
+- Light, dark, or follow-the-system theme
+- English, Portuguese and Spanish, detected from your system
+- Keyboard-driven, screen-reader labelled, and checked against `axe`
+- One instance only — a second launch focuses the window you already have
+
+## Screenshots
+
+> **Note**
+> Screenshots are not in the repository yet. Run `npm run tauri dev`, capture the
+> Discover, Installed and Updates sections, and drop the files into
+> `docs/screenshots/` — this section links to them.
 
 ## Install
 
-> Pre-built installers will appear on the [Releases page](https://github.com/rakjs/Wingman/releases) once v0.1.0 is published.
+**From a release**
 
-Once published to the official catalog:
+Grab the latest `.msi` from the [Releases page](https://github.com/rakjs/Wingman/releases)
+and run it.
+
+> Releases are not code-signed yet, so SmartScreen will warn on first run.
+> Choose **More info → Run anyway**, or build it yourself from source below.
+
+**From winget itself** (once the manifest is published)
 
 ```powershell
 winget install Rakjs.Wingman
 ```
 
+## Requirements
+
+| Requirement    | Minimum                                              |
+| -------------- | ---------------------------------------------------- |
+| Windows        | 10 (1809) or 11                                      |
+| winget         | 1.6 — ships as "App Installer" from the Microsoft Store |
+| WebView2       | Preinstalled on Windows 11; installed by the Wingman installer on Windows 10 |
+
+Wingman checks all of this at startup and walks you through anything missing.
+
 ## Build from source
 
 **Prerequisites**
 
-- [Rust](https://rustup.rs/) (with the MSVC toolchain)
+- [Rust](https://rustup.rs/) 1.82+ with the MSVC toolchain
 - [Node.js](https://nodejs.org/) 20 LTS or newer
-- [Microsoft C++ Build Tools](https://visualstudio.microsoft.com/visual-cpp-build-tools/) (Desktop development with C++ workload)
-- [WebView2 runtime](https://developer.microsoft.com/en-us/microsoft-edge/webview2/) (preinstalled on Windows 11)
-- `winget` available in `PATH` — verify with `winget --version`
+- [Microsoft C++ Build Tools](https://visualstudio.microsoft.com/visual-cpp-build-tools/) with the "Desktop development with C++" workload
 
-**Run in development**
+**Run it**
 
 ```powershell
 git clone https://github.com/rakjs/Wingman.git
@@ -61,58 +143,145 @@ npm install
 npm run tauri dev
 ```
 
-`tauri dev` starts the Vite dev server on port 1420 and opens the Wingman window. **Don't double-click the binary in `src-tauri/target/debug/` directly** — debug builds load the frontend from the dev server, so without `tauri dev` running you'll get a blank window (or worse, the UI of any other Vite project squatting on port 1420).
+> **Warning**
+> Do not double-click the executable in `src-tauri/target/debug/`. Debug builds
+> load their interface from the Vite dev server on port 1420, so without
+> `tauri dev` running you get a blank window — or, if another Vite project holds
+> that port, *that* project's interface. Use `npm run tauri dev` while developing
+> and `npm run tauri build` for anything you actually want to run.
 
-**Bundle a standalone release**
+**Build installers**
 
 ```powershell
 npm run tauri build
 ```
 
-Produces a single self-contained `Wingman.exe` plus an installer (`.msi`) in `src-tauri/target/release/bundle/msi/`. These are what you ship to users — they don't need Node, Rust, or a dev server.
+Produces a standalone `Wingman.exe` plus `.msi` and `.exe` installers under
+`src-tauri/target/release/bundle/`.
 
-## Tech stack
+## How it works
 
-- [Tauri 2](https://tauri.app/) — Rust shell + native WebView2
-- [React 19](https://react.dev/) + [TypeScript](https://www.typescriptlang.org/) — frontend
-- [Vite](https://vitejs.dev/) — dev server / bundler
-- [tokio](https://tokio.rs/) — async process orchestration
-- Custom column-aware parser for `winget` tabular output (UTF-16 BOM aware)
+Wingman is a thin, careful shell around the `winget` executable. The frontend
+never touches a shell; it can only call the commands the Rust layer exposes.
+
+```mermaid
+flowchart LR
+    UI["React UI<br/><small>search · lists · dialogs</small>"]
+    API["api.ts<br/><small>the only bridge</small>"]
+    CMD["commands.rs<br/><small>#[tauri::command]</small>"]
+    W["winget.rs<br/><small>argv · parse · retry · cancel</small>"]
+    EXE(["winget.exe"])
+
+    UI -->|invoke| API --> CMD --> W -->|argv, never a shell| EXE
+    EXE -.->|stdout + stderr| W
+    W -.->|"winget-progress / winget-done"| UI
+```
+
+A few decisions worth knowing about:
+
+- **Arguments, never a shell.** Package identifiers are passed as separate argv
+  entries and validated first, so nothing a package is named can turn into a
+  command.
+- **One operation at a time.** winget takes an exclusive lock on its package
+  source, so everything you start is queued and run in order rather than fired
+  in parallel.
+- **Errors are typed.** winget's exit codes are mapped onto a Rust enum, which is
+  what lets the interface offer "restart as administrator" instead of printing
+  `0x8A150019`.
+- **Output parsing is defensive.** winget's tables are aligned by *display*
+  width, its progress bar rewrites lines with carriage returns, and some shells
+  hand back UTF-16. The parser handles all three, and a property test keeps it
+  from panicking on anything unexpected.
+- **No structured output exists.** `winget search --output json` is not a thing
+  (checked against 1.29). Parsing the table is currently the only option; the
+  `Backend` enum is the seam where a COM implementation will plug in.
+
+More detail in [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 
 ## Project layout
 
 ```
 Wingman/
-├── src/                    # React frontend
-│   ├── components/         # TabNav, PackageList, FeaturedGrid, …
-│   ├── hooks/              # useWinget — invoke + event listeners
-│   ├── data/featured.ts    # Curated popular packages
-│   └── i18n.ts             # Bundled PT/EN strings
-├── src-tauri/              # Rust backend
-│   ├── src/
-│   │   ├── lib.rs          # Tauri builder + handlers
-│   │   ├── commands.rs     # #[tauri::command] surface
-│   │   └── winget.rs       # winget process wrapper + parser
-│   └── tauri.conf.json     # App identity, window, bundle config
-└── public/                 # Static assets (logo, favicon)
+├── src/                        # React frontend
+│   ├── components/             # Sidebar, PackageList, dialogs, …
+│   ├── hooks/                  # events, queue, storage, theme, toasts
+│   ├── lib/                    # api bridge, error mapping, shared types
+│   ├── data/featured.ts        # curated catalogue
+│   ├── i18n.ts                 # en / pt / es, plurals, dates, collation
+│   └── App.tsx                 # sections and orchestration
+├── src-tauri/                  # Rust backend
+│   ├── src/winget.rs           # process wrapper, parser, cancellation
+│   ├── src/commands.rs         # the command surface
+│   ├── src/error.rs            # exit codes → typed errors
+│   ├── src/logging.rs          # rotated file logs
+│   └── tests/integration.rs    # runs against a real winget
+└── .github/workflows/ci.yml    # lint, types, tests, clippy, audit, release
 ```
 
-## Roadmap
+## Keyboard shortcuts
 
-See [the project roadmap](CHANGELOG.md#unreleased) for what's coming next. High-level direction:
+| Keys           | Action                        |
+| -------------- | ----------------------------- |
+| `Ctrl` `F`     | Focus search                  |
+| `Ctrl` `K`     | Focus search                  |
+| `Ctrl` `1`–`4` | Discover / Installed / Updates / History |
+| `Esc`          | Close a dialog, dismiss an error |
+| `?`            | Show the shortcut list        |
 
-- **Robustness** — UAC auto-elevation, cancel in-flight operations, persistent logs
-- **Store features** — package details, favorites, export/import lists, source filters
-- **Distribution** — GitHub Actions CI, signed MSI, auto-updater, `winget-pkgs` manifest
+## Where your data lives
+
+Wingman keeps everything on your machine and sends nothing anywhere.
+
+| What                                          | Where                              |
+| --------------------------------------------- | ---------------------------------- |
+| Logs (daily, kept 14 days)                    | `%LOCALAPPDATA%\Wingman\logs`      |
+| Theme, language, favorites, pins, history     | Browser local storage inside the app |
+| Window size and position                      | Managed by the Tauri window-state plugin |
+
+There is no telemetry, no account, and no network traffic beyond what winget
+itself makes to fetch packages.
+
+## Troubleshooting
+
+**"winget is required" on a machine that has winget.**
+Wingman needs 1.6 or newer. Update "App Installer" from the Microsoft Store.
+
+**An install fails with an administrator error.**
+Accept the "Restart as administrator" prompt. Some packages write to locations a
+normal user cannot touch.
+
+**"winget is busy with another operation."**
+Something else — Windows Update, another winget window, or a second copy of
+Wingman — holds the source lock. Wingman retries automatically; if it persists,
+close the other one.
+
+**An operation appears stuck.**
+Press Cancel; the whole process tree is killed. Anything silent for 30 minutes is
+stopped automatically. The activity log and `%LOCALAPPDATA%\Wingman\logs` have
+the details.
 
 ## Contributing
 
-Contributions are very welcome! See [CONTRIBUTING.md](CONTRIBUTING.md) for setup, conventions, and PR guidelines. By participating you agree to the [Code of Conduct](CODE_OF_CONDUCT.md).
+Contributions are welcome. [CONTRIBUTING.md](CONTRIBUTING.md) covers the dev
+setup, the checks CI runs, and how to add a translation (it is one file). By
+taking part you agree to the [Code of Conduct](CODE_OF_CONDUCT.md).
 
-Found a security issue? Please follow the process in [SECURITY.md](SECURITY.md) — don't open a public issue.
+Found a security issue? Please follow [SECURITY.md](SECURITY.md) instead of
+opening a public issue.
+
+## Roadmap
+
+Tracked in [CHANGELOG.md](CHANGELOG.md#unreleased). The headline items:
+
+- Drive winget through its COM API instead of parsing console output
+- Code-signed installers
+- In-app updates
+- A published `winget-pkgs` manifest, so you can install Wingman with winget
 
 ## License
 
 [MIT](LICENSE) © 2026 Rakjsu
 
-`winget` is a trademark of Microsoft Corporation. Wingman is an independent third-party UI and is not affiliated with or endorsed by Microsoft.
+Wingman is an independent project. `winget`, Windows and Microsoft Store are
+trademarks of Microsoft Corporation; Wingman is not affiliated with or endorsed
+by Microsoft.
