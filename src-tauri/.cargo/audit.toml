@@ -1,5 +1,8 @@
 # cargo-audit configuration.
 #
+# This must live at `.cargo/audit.toml`; cargo-audit does not read an
+# `audit.toml` sitting next to Cargo.toml, and offers no --config flag.
+#
 # Ignores are documented, not silent: each one records why the advisory does not
 # reach a Wingman user, and what would make it matter again.
 

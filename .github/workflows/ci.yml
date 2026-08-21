@@ -107,7 +107,7 @@ jobs:
       - name: cargo audit
         run: |
           cargo install cargo-audit --locked
-          cd src-tauri && cargo audit
+          cd src-tauri && cargo audit   # reads .cargo/audit.toml
 
       # Licence and provenance checks for the Rust dependency tree.
       - name: cargo deny
