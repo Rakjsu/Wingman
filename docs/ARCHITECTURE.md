@@ -124,6 +124,55 @@ the case where something _outside_ Wingman holds the lock.
 
 This is also why `cargo test --test integration` needs `--test-threads=1`.
 
+## Deep-clean uninstall
+
+`cleanup.rs` finds what an uninstaller left behind — folders, registry keys,
+autostart values, shortcuts — and removes what the user approves. This is the
+one part of Wingman that deletes things winget does not know about, so its
+design is deliberately paranoid:
+
+```
+confirm dialog (checkbox on)
+  └── prepare_cleanup       BEFORE the uninstall: snapshot the ARP entry
+                            (DisplayName, Publisher, InstallLocation) — the
+                            uninstaller is about to erase it
+  └── uninstall runs        (existing queue/flow)
+  └── scan_leftovers        AFTER success: match snapshot + name against
+                            well-known roots; return preview items with
+                            opaque ids; store paths server-side
+  └── CleanupDialog         user reviews, unchecks, confirms
+  └── clean_leftovers(ids)  re-validate every guard, then delete
+```
+
+The rules, in order of importance:
+
+1. **Nothing is deleted without a preview.** Scan and clean are separate
+   commands; the scan is read-only.
+2. **Deletions are recoverable.** Folders and shortcuts go through the `trash`
+   crate to the Recycle Bin. Registry keys are exported with `reg.exe export`
+   to `%LOCALAPPDATA%\Wingman\backups\<pkg>-<ts>\` first — and if the export
+   fails, the key is _not_ deleted.
+3. **The frontend never supplies a path.** Scan results live in a session store
+   inside the Rust process keyed by opaque ids; `clean_leftovers` accepts only
+   those ids. A compromised webview cannot name a path to delete.
+4. **Guards are re-checked at delete time.** `is_protected_path` refuses drive
+   roots, the Windows directory, every known root itself (AppData, Program
+   Files, the user profile…), and Wingman's own data. `is_safe_reg_subkey`
+   refuses anything outside `Software\*`, anything directly under
+   `Software\Microsoft` (except the sanctioned `…\CurrentVersion\Uninstall\<app>`
+   leftover), and any leaf on the deny-list.
+5. **Matching is conservative.** Names are sanitized (`"7-Zip 23.01 (x64)"` →
+   `"7-Zip"`), must be ≥ 3 characters, and generic words (`app`, `setup`,
+   `cache`, …) plus multi-product vendors (`Google`, `Adobe`, …) are
+   deny-listed as standalone targets — `Software\Google\Chrome` can be offered,
+   `Software\Google` cannot. A vendor folder is only offered whole when the
+   app's entry is its _single_ child. High-confidence findings are pre-checked
+   in the dialog; "possible" matches start unchecked.
+
+A `proptest`-style unit suite pins the guards; `clean_refuses_protected_targets…`
+asserts that even a forged session item aimed at `C:\` or `Software\Microsoft`
+is refused at the last line of defense.
+
 ## Errors
 
 `error.rs` maps winget's exit codes onto variants that imply an action:

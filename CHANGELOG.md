@@ -9,6 +9,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Deep-clean uninstall** — an opt-out checkbox on the uninstall confirmation.
+  Wingman snapshots the app's registry uninstall entry _before_ removal (the
+  uninstaller erases it), then scans well-known leftover locations afterwards:
+  AppData / ProgramData / Program Files folders, `HKCU`/`HKLM` Software keys,
+  autostart (Run) values, and Start Menu / Desktop shortcuts. Every finding is
+  previewed with its size and the reason it matched; nothing is deleted until
+  the user confirms the selection. Folders and shortcuts go to the **Recycle
+  Bin**; registry keys are exported to a **`.reg` backup** under
+  `%LOCALAPPDATA%\Wingman\backups` before deletion. Matching is guarded by a
+  deny-list (never `Microsoft`, `Windows`, bare vendor nodes of multi-product
+  publishers, drive roots, the user profile, …) and the guards are re-checked
+  at deletion time; the frontend only ever sends opaque item ids, never paths.
 - **Light / dark / system theme** with a switcher in the sidebar; "system" follows the OS live
 - **Sidebar navigation** replacing the tab bar, with live badges for installed and upgradable counts
 - **History** section listing every operation with its outcome and timestamp

@@ -69,6 +69,10 @@ invocation you could have typed yourself.
 
 - Filter and sort the installed list by name, identifier or source
 - Select several packages and remove them in one go
+- **Deep-clean uninstall** — after the uninstaller runs, Wingman finds the
+  folders, registry keys, autostart entries and shortcuts it left behind and
+  offers them for removal. Everything is previewed first, folders go to the
+  Recycle Bin, and registry keys are backed up to a `.reg` file before deletion
 - Package details: publisher, licence, description, homepage, and every installable version
 - Export your package list and import it on another machine
 
@@ -232,11 +236,12 @@ Wingman/
 
 Wingman keeps everything on your machine and sends nothing anywhere.
 
-| What                                      | Where                                    |
-| ----------------------------------------- | ---------------------------------------- |
-| Logs (daily, kept 14 days)                | `%LOCALAPPDATA%\Wingman\logs`            |
-| Theme, language, favorites, pins, history | Browser local storage inside the app     |
-| Window size and position                  | Managed by the Tauri window-state plugin |
+| What                                        | Where                                    |
+| ------------------------------------------- | ---------------------------------------- |
+| Logs (daily, kept 14 days)                  | `%LOCALAPPDATA%\Wingman\logs`            |
+| Registry backups from deep-clean uninstalls | `%LOCALAPPDATA%\Wingman\backups`         |
+| Theme, language, favorites, pins, history   | Browser local storage inside the app     |
+| Window size and position                    | Managed by the Tauri window-state plugin |
 
 There is no telemetry, no account, and no network traffic beyond what winget
 itself makes to fetch packages.

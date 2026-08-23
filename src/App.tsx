@@ -1,5 +1,6 @@
 import { Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import "./App.css";
+import { CleanupDialog, type CleanupRequest } from "./components/CleanupDialog";
 import { ConfirmDialog, type ConfirmRequest } from "./components/ConfirmDialog";
 import {
   EmptyState,
@@ -103,6 +104,8 @@ export default function App() {
   const [elevation, setElevation] = useState(false);
   const [shortcuts, setShortcuts] = useState(false);
   const [selection, setSelection] = useState<Set<string>>(new Set());
+  // One dialog per cleaned package, shown in arrival order.
+  const [cleanupQueue, setCleanupQueue] = useState<CleanupRequest[]>([]);
 
   const favorites = useStringSet("wingman.favorites");
   const pins = useStringSet("wingman.pins");
@@ -112,6 +115,8 @@ export default function App() {
   const logId = useRef(0);
   const lastUpdateCount = useRef(0);
   const refreshTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // Package ids whose uninstall should be followed by a leftover scan.
+  const deepCleanIntents = useRef(new Set<string>());
 
   // -- data loading ---------------------------------------------------------
 
@@ -265,8 +270,30 @@ export default function App() {
                   : "toast.upgradedAll";
         push(t(toastKey, { name }), "success");
         if (event.action === "import") push(t("import.skipped"), "info");
+        if (event.action === "uninstall" && deepCleanIntents.current.has(event.id)) {
+          deepCleanIntents.current.delete(event.id);
+          void api
+            .scanLeftovers(event.id)
+            .then((scan) => {
+              if (scan.items.length > 0) {
+                setCleanupQueue((queue) => [
+                  ...queue,
+                  {
+                    packageId: event.id,
+                    packageName: name,
+                    items: scan.items,
+                    elevated: scan.elevated,
+                  },
+                ]);
+              } else {
+                push(t("cleanup.none", { name }), "info");
+              }
+            })
+            .catch((e) => setError(toWingetError(e)));
+        }
         scheduleRefresh();
       } else if (event.error) {
+        deepCleanIntents.current.delete(event.id);
         if (isCancellation(event.error)) {
           push(t("toast.cancelled"), "info");
         } else if (needsElevation(event.error)) {
@@ -454,6 +481,15 @@ export default function App() {
     [queue, finishBusy],
   );
 
+  /// The ARP snapshot must exist before the uninstaller erases the registry
+  /// entry, so this runs at confirm time, not after the uninstall.
+  const armDeepClean = useCallback((pkg: Package) => {
+    deepCleanIntents.current.add(pkg.id);
+    void api
+      .prepareCleanup(pkg.id, pkg.name || pkg.id)
+      .catch((e) => console.warn("wingman: cleanup snapshot failed", e));
+  }, []);
+
   const handleAction = useCallback(
     (action: RowAction, pkg: Package) => {
       if (action === "uninstall") {
@@ -462,13 +498,17 @@ export default function App() {
           body: t("confirm.uninstall.body"),
           confirmLabel: t("action.uninstall"),
           destructive: true,
-          onConfirm: () => enqueueAction("uninstall", pkg),
+          checkbox: { label: t("cleanup.option"), defaultChecked: true },
+          onConfirm: (deepClean) => {
+            if (deepClean) armDeepClean(pkg);
+            enqueueAction("uninstall", pkg);
+          },
         });
         return;
       }
       enqueueAction(action, pkg);
     },
-    [enqueueAction],
+    [enqueueAction, armDeepClean],
   );
 
   const handleCancel = useCallback(
@@ -552,8 +592,17 @@ export default function App() {
       items: ids.map((id) => installed.find((p) => p.id === id)?.name || id),
       confirmLabel: t("action.uninstall"),
       destructive: true,
-      onConfirm: () => {
+      checkbox: { label: t("cleanup.option"), defaultChecked: true },
+      onConfirm: (deepClean) => {
         setSelection(new Set());
+        if (deepClean) {
+          for (const id of ids) {
+            const pkg = installed.find((p) => p.id === id);
+            armDeepClean(
+              pkg ?? { id, name: id, version: "", available: null, source: null },
+            );
+          }
+        }
         // The queue runs these one at a time, which is what winget requires.
         queue.enqueue(
           ids.map((id) => ({
@@ -568,7 +617,7 @@ export default function App() {
         );
       },
     });
-  }, [selection, installed, queue, finishBusy]);
+  }, [selection, installed, queue, finishBusy, armDeepClean]);
 
   const handleExport = useCallback(async () => {
     try {
@@ -950,6 +999,16 @@ export default function App() {
       <Toasts toasts={toasts} onDismiss={dismiss} />
 
       {confirm && <ConfirmDialog request={confirm} onClose={() => setConfirm(null)} />}
+
+      {cleanupQueue.length > 0 && !confirm && (
+        <CleanupDialog
+          key={cleanupQueue[0].packageId}
+          request={cleanupQueue[0]}
+          onClose={() => setCleanupQueue((queue) => queue.slice(1))}
+          onNeedsElevation={() => setElevation(true)}
+          onToast={push}
+        />
+      )}
       {shortcuts && <ShortcutsDialog onClose={() => setShortcuts(false)} />}
 
       {details && (

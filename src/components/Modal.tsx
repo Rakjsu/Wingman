@@ -26,6 +26,12 @@ export function Modal({
   const panelRef = useRef<HTMLDivElement>(null);
   const restoreRef = useRef<HTMLElement | null>(null);
   const backdropPressed = useRef(false);
+  // Callers pass an inline arrow, so `onClose` has a new identity on every
+  // parent render. Reading it through a ref keeps it out of the effect's deps:
+  // otherwise the effect tears down and re-runs on unrelated re-renders,
+  // yanking focus back to the first control and corrupting the restore target.
+  const closeRef = useRef(onClose);
+  closeRef.current = onClose;
 
   useEffect(() => {
     restoreRef.current = document.activeElement as HTMLElement | null;
@@ -35,7 +41,7 @@ export function Modal({
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
         event.stopPropagation();
-        onClose();
+        closeRef.current();
         return;
       }
       if (event.key !== "Tab" || !panel) return;
@@ -58,7 +64,7 @@ export function Modal({
       document.removeEventListener("keydown", onKeyDown, true);
       restoreRef.current?.focus?.();
     };
-  }, [onClose]);
+  }, []);
 
   return (
     <div

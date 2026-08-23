@@ -1,5 +1,11 @@
 import { invoke } from "@tauri-apps/api/core";
-import type { Package, PackageDetails, StartupInfo } from "./types";
+import type {
+  CleanResult,
+  Package,
+  PackageDetails,
+  ScanResult,
+  StartupInfo,
+} from "./types";
 
 /**
  * The single bridge to Rust. Everything the UI can ask winget to do goes
@@ -20,6 +26,11 @@ export const api = {
   cancel: (id: string) => invoke<boolean>("cancel", { id }),
   exportList: (path: string) => invoke<void>("export_list", { path }),
   importList: (path: string) => invoke<void>("import_list", { path }),
+  prepareCleanup: (id: string, name: string) =>
+    invoke<void>("prepare_cleanup", { id, name }),
+  scanLeftovers: (id: string) => invoke<ScanResult>("scan_leftovers", { id }),
+  cleanLeftovers: (id: string, itemIds: string[]) =>
+    invoke<CleanResult>("clean_leftovers", { id, itemIds }),
   relaunchElevated: () => invoke<void>("relaunch_elevated"),
   openLogDir: () => invoke<void>("open_log_dir"),
   openUrl: (url: string) => invoke<void>("open_url", { url }),

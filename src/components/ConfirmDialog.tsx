@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { t } from "../i18n";
 import { Modal } from "./Modal";
 
@@ -7,7 +8,9 @@ export interface ConfirmRequest {
   items?: string[];
   confirmLabel?: string;
   destructive?: boolean;
-  onConfirm: () => void;
+  /** Optional opt-in rendered under the body (e.g. "also scan for leftovers"). */
+  checkbox?: { label: string; defaultChecked?: boolean };
+  onConfirm: (checkboxChecked: boolean) => void;
 }
 
 export function ConfirmDialog({
@@ -17,8 +20,10 @@ export function ConfirmDialog({
   request: ConfirmRequest;
   onClose: () => void;
 }) {
+  const [checked, setChecked] = useState(request.checkbox?.defaultChecked ?? false);
+
   const confirm = () => {
-    request.onConfirm();
+    request.onConfirm(checked);
     onClose();
   };
 
@@ -49,6 +54,16 @@ export function ConfirmDialog({
           ))}
           {request.items.length > 12 && <li>… +{request.items.length - 12}</li>}
         </ul>
+      )}
+      {request.checkbox && (
+        <label className="check-label">
+          <input
+            type="checkbox"
+            checked={checked}
+            onChange={(e) => setChecked(e.currentTarget.checked)}
+          />
+          {request.checkbox.label}
+        </label>
       )}
     </Modal>
   );

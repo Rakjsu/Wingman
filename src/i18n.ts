@@ -176,6 +176,36 @@ const en = {
     "It is already {percent}% done. Stopping now may leave a partial install behind.",
   "confirm.cancel.action": "Stop it",
   "import.skipped": "Packages unavailable in your sources were skipped.",
+
+  "cleanup.option": "Also look for leftovers afterwards (folders, registry, shortcuts)",
+  "cleanup.title": "Leftovers from {name}",
+  "cleanup.subtitle":
+    "The uninstaller finished, but these traces are still on your system. Review the list and remove what you do not want to keep.",
+  "cleanup.none": "No leftovers found for {name}.",
+  "cleanup.recycleNote":
+    "Folders and shortcuts go to the Recycle Bin. Registry keys are exported to a backup file before removal.",
+  "cleanup.adminWarning":
+    "Some selected items need administrator rights and may fail until Wingman is restarted as administrator.",
+  "cleanup.kind.folder": "Folders",
+  "cleanup.kind.registryKey": "Registry keys",
+  "cleanup.kind.registryValue": "Startup entries",
+  "cleanup.kind.shortcut": "Shortcuts",
+  "cleanup.reason.installLocation": "The folder the app installed into",
+  "cleanup.reason.nameMatch": "Name matches the app",
+  "cleanup.reason.publisherOnly": "Publisher folder holding only this app",
+  "cleanup.reason.arpLeftover": "Dangling entry in installed programs",
+  "cleanup.reason.runKey": "Autostart entry pointing at the removed app",
+  "cleanup.reason.shortcutMatch": "Shortcut named after the app",
+  "cleanup.requiresAdmin": "needs administrator",
+  "cleanup.possibleMatch": "possible match",
+  "cleanup.selectedSummary": "{n} selected · {size}",
+  "cleanup.removeSelected": "Remove selected ({n})",
+  "cleanup.removing": "Removing…",
+  "cleanup.skip": "Keep everything",
+  "cleanup.done": "{n} leftover removed|{n} leftovers removed",
+  "cleanup.partial": "Removed: {n} · Failed: {m}",
+  "cleanup.backupAt": "Registry backup saved to {path}",
+  "cleanup.scanning": "Checking for leftovers…",
 } as const;
 
 export type TKey = keyof typeof en;
@@ -359,6 +389,36 @@ const pt: Record<TKey, string> = {
     "Já está em {percent}%. Parar agora pode deixar uma instalação pela metade.",
   "confirm.cancel.action": "Parar",
   "import.skipped": "Pacotes indisponíveis nas suas fontes foram pulados.",
+
+  "cleanup.option": "Procurar sobras depois (pastas, registro, atalhos)",
+  "cleanup.title": "Sobras de {name}",
+  "cleanup.subtitle":
+    "A desinstalação terminou, mas estes rastros continuam no sistema. Revise a lista e remova o que não quiser manter.",
+  "cleanup.none": "Nenhuma sobra encontrada de {name}.",
+  "cleanup.recycleNote":
+    "Pastas e atalhos vão para a Lixeira. Chaves de registro são exportadas para um arquivo de backup antes da remoção.",
+  "cleanup.adminWarning":
+    "Alguns itens selecionados precisam de administrador e podem falhar até o Wingman reiniciar como administrador.",
+  "cleanup.kind.folder": "Pastas",
+  "cleanup.kind.registryKey": "Chaves de registro",
+  "cleanup.kind.registryValue": "Entradas de inicialização",
+  "cleanup.kind.shortcut": "Atalhos",
+  "cleanup.reason.installLocation": "A pasta onde o app foi instalado",
+  "cleanup.reason.nameMatch": "Nome corresponde ao app",
+  "cleanup.reason.publisherOnly": "Pasta do fabricante contendo só este app",
+  "cleanup.reason.arpLeftover": "Entrada órfã em programas instalados",
+  "cleanup.reason.runKey": "Entrada de inicialização apontando para o app removido",
+  "cleanup.reason.shortcutMatch": "Atalho com o nome do app",
+  "cleanup.requiresAdmin": "precisa de administrador",
+  "cleanup.possibleMatch": "correspondência possível",
+  "cleanup.selectedSummary": "{n} selecionados · {size}",
+  "cleanup.removeSelected": "Remover selecionados ({n})",
+  "cleanup.removing": "Removendo…",
+  "cleanup.skip": "Manter tudo",
+  "cleanup.done": "{n} sobra removida|{n} sobras removidas",
+  "cleanup.partial": "Removidos: {n} · Falharam: {m}",
+  "cleanup.backupAt": "Backup do registro salvo em {path}",
+  "cleanup.scanning": "Verificando sobras…",
 };
 
 const es: Record<TKey, string> = {
@@ -540,6 +600,36 @@ const es: Record<TKey, string> = {
     "Ya va por el {percent}%. Detenerla ahora puede dejar una instalación a medias.",
   "confirm.cancel.action": "Detener",
   "import.skipped": "Se omitieron los paquetes no disponibles en tus fuentes.",
+
+  "cleanup.option": "Buscar restos después (carpetas, registro, accesos directos)",
+  "cleanup.title": "Restos de {name}",
+  "cleanup.subtitle":
+    "La desinstalación terminó, pero estos rastros siguen en el sistema. Revisa la lista y elimina lo que no quieras conservar.",
+  "cleanup.none": "No se encontraron restos de {name}.",
+  "cleanup.recycleNote":
+    "Las carpetas y los accesos directos van a la Papelera. Las claves del registro se exportan a un archivo de copia antes de eliminarse.",
+  "cleanup.adminWarning":
+    "Algunos elementos seleccionados necesitan administrador y pueden fallar hasta reiniciar Wingman como administrador.",
+  "cleanup.kind.folder": "Carpetas",
+  "cleanup.kind.registryKey": "Claves del registro",
+  "cleanup.kind.registryValue": "Entradas de inicio",
+  "cleanup.kind.shortcut": "Accesos directos",
+  "cleanup.reason.installLocation": "La carpeta donde se instaló la app",
+  "cleanup.reason.nameMatch": "El nombre coincide con la app",
+  "cleanup.reason.publisherOnly": "Carpeta del fabricante que solo contiene esta app",
+  "cleanup.reason.arpLeftover": "Entrada huérfana en programas instalados",
+  "cleanup.reason.runKey": "Entrada de inicio que apunta a la app eliminada",
+  "cleanup.reason.shortcutMatch": "Acceso directo con el nombre de la app",
+  "cleanup.requiresAdmin": "necesita administrador",
+  "cleanup.possibleMatch": "coincidencia posible",
+  "cleanup.selectedSummary": "{n} seleccionados · {size}",
+  "cleanup.removeSelected": "Eliminar seleccionados ({n})",
+  "cleanup.removing": "Eliminando…",
+  "cleanup.skip": "Conservar todo",
+  "cleanup.done": "{n} resto eliminado|{n} restos eliminados",
+  "cleanup.partial": "Eliminados: {n} · Fallaron: {m}",
+  "cleanup.backupAt": "Copia del registro guardada en {path}",
+  "cleanup.scanning": "Buscando restos…",
 };
 
 export const dictionaries: Record<Lang, Record<TKey, string>> = { en, pt, es };

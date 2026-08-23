@@ -74,3 +74,43 @@ export interface HistoryEntry {
 }
 
 export type SortKey = "name" | "id" | "source";
+
+// ---------------------------------------------------------------------------
+// Deep-clean uninstall — mirrors the camelCase DTOs in cleanup.rs.
+// ---------------------------------------------------------------------------
+
+export type LeftoverKind = "folder" | "registryKey" | "registryValue" | "shortcut";
+export type LeftoverReason =
+  | "installLocation"
+  | "nameMatch"
+  | "publisherOnly"
+  | "arpLeftover"
+  | "runKey"
+  | "shortcutMatch";
+
+export interface LeftoverItem {
+  id: string;
+  kind: LeftoverKind;
+  path: string;
+  sizeBytes: number | null;
+  reason: LeftoverReason;
+  confidence: "high" | "medium";
+  requiresAdmin: boolean;
+}
+
+export interface ScanResult {
+  items: LeftoverItem[];
+  elevated: boolean;
+}
+
+export interface CleanItemResult {
+  id: string;
+  ok: boolean;
+  needsAdmin: boolean;
+  error: string | null;
+}
+
+export interface CleanResult {
+  results: CleanItemResult[];
+  backupDir: string | null;
+}

@@ -1,3 +1,4 @@
+mod cleanup;
 mod commands;
 mod error;
 mod logging;
@@ -68,6 +69,9 @@ pub fn run() {
             commands::cancel,
             commands::export_list,
             commands::import_list,
+            commands::prepare_cleanup,
+            commands::scan_leftovers,
+            commands::clean_leftovers,
             commands::relaunch_elevated,
             commands::open_log_dir,
             commands::open_url,

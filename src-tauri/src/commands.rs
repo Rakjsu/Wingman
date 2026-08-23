@@ -1,3 +1,4 @@
+use crate::cleanup::{CleanResultDto, CleanupStore, ScanResultDto};
 use crate::error::WingetError;
 use crate::logging;
 use crate::winget::{self, Backend, OpRegistry, Package, PackageDetails, SearchCache};
@@ -9,6 +10,7 @@ use tauri::{AppHandle, Emitter, Manager, State};
 pub struct AppState {
     pub registry: Arc<OpRegistry>,
     pub cache: Arc<SearchCache>,
+    pub cleanup: Arc<CleanupStore>,
 }
 
 #[derive(Serialize, Clone)]
@@ -249,6 +251,58 @@ pub async fn import_list(
     .map(String::from)
     .collect();
     perform(app, registry, cache, "import", "*".to_string(), args).await
+}
+
+// ---------------------------------------------------------------------------
+// Deep-clean uninstall
+// ---------------------------------------------------------------------------
+
+/// Capture the app's Add/Remove Programs data BEFORE the uninstall erases it.
+/// `name` is a display hint from the UI; it only influences which leftovers
+/// are *offered* — every deletion re-validates against the path guards, so a
+/// bad hint can at worst surface an irrelevant candidate in the preview.
+#[tauri::command]
+pub async fn prepare_cleanup(
+    state: State<'_, AppState>,
+    id: String,
+    name: String,
+) -> Result<(), WingetError> {
+    winget::validate_id(&id)?;
+    let store = state.cleanup.clone();
+    tokio::task::spawn_blocking(move || store.prepare(&id, &name))
+        .await
+        .map_err(|e| WingetError::Io(e.to_string()))?;
+    Ok(())
+}
+
+/// Walk the well-known leftover locations for the just-uninstalled package.
+/// Read-only: nothing is deleted here.
+#[tauri::command]
+pub async fn scan_leftovers(
+    state: State<'_, AppState>,
+    id: String,
+) -> Result<ScanResultDto, WingetError> {
+    winget::validate_id(&id)?;
+    let store = state.cleanup.clone();
+    tokio::task::spawn_blocking(move || store.scan(&id))
+        .await
+        .map_err(|e| WingetError::Io(e.to_string()))
+}
+
+/// Delete the leftovers the user approved. Accepts only opaque item ids from
+/// the preceding scan — paths never round-trip through the frontend.
+#[tauri::command]
+pub async fn clean_leftovers(
+    state: State<'_, AppState>,
+    id: String,
+    item_ids: Vec<String>,
+) -> Result<CleanResultDto, WingetError> {
+    winget::validate_id(&id)?;
+    tracing::info!(package = %id, count = item_ids.len(), "cleaning leftovers");
+    let store = state.cleanup.clone();
+    tokio::task::spawn_blocking(move || store.clean(&id, &item_ids))
+        .await
+        .map_err(|e| WingetError::Io(e.to_string()))
 }
 
 // ---------------------------------------------------------------------------
